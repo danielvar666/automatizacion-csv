@@ -1,0 +1,74 @@
+name: Automatización Tigo con Parámetros
+
+on:
+  workflow_dispatch:
+    inputs:
+      cant_samsung:
+        description: 'Cantidad de registros para Samsung'
+        required: true
+        default: '8000'
+      cant_generico:
+        description: 'Cantidad de registros para Genérico'
+        required: true
+        default: '20000'
+      grupo_samsung:
+        description: 'Nombre de grupo para Samsung (ej. ventaft_samsung)'
+        required: true
+        default: 'ventaft_samsung'
+      grupo_generico:
+        description: 'Nombre de grupo para Genérico (ej. ventaft_generico)'
+        required: true
+        default: 'ventaft_generico'
+
+jobs:
+  procesar:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Descargar repositorio y archivos LFS
+      uses: actions/checkout@v4
+      with:
+        lfs: true
+
+    - name: Configurar Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Instalar dependencias
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Ejecutar Script 1 (Segmentación y Memoria)
+      run: |
+        python -c "
+        import os
+        cant_s = '${{ inputs.cant_samsung }}'
+        cant_g = '${{ inputs.cant_generico }}'
+        # Simular entradas para input()
+        with open('inputs.txt', 'w') as f:
+            f.write(f'{cant_s}\n{cant_g}\n')
+        "
+        python script1.py < inputs.txt
+
+    - name: Ejecutar Script 2 (Formateo Final)
+      run: |
+        python -c "
+        grupo_s = '${{ inputs.grupo_samsung }}'
+        grupo_g = '${{ inputs.grupo_generico }}'
+        # Simular entradas para input()
+        with open('inputs_s2.txt', 'w') as f:
+            f.write(f'{grupo_s}\n{grupo_g}\n')
+        "
+        python script2.py < inputs_s2.txt
+
+    - name: Guardar estado y resultados en GitHub
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git add estado.json co_mobile_ft_vac_samsung_final.csv co_mobile_ft_vac_generico_final.csv
+        git commit -m "Automático: Actualizar estado.json y generar archivos finales" || exit 0
+        git push
