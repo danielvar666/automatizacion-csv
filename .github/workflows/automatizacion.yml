@@ -77,17 +77,13 @@ jobs:
         GDRIVE_TOKEN: ${{ secrets.RCLONE_CONFIG_GDRIVE_TOKEN }}
         FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
       run: |
-        # Instalar rclone vía apt para evitar restricciones de permisos de snap
         sudo apt-get update && sudo apt-get install -y rclone
 
-        # Crear el directorio y escribir la configuración
         mkdir -p ~/.config/rclone
-        cat <<EOF > ~/.config/rclone/rclone.conf
-        [gdrive]
-        type = drive
-        token = $GDRIVE_TOKEN
-        scope = drive
-        EOF
-        # Copiar los CSV generados a la carpeta especificada de Google Drive
+        echo "[gdrive]" > ~/.config/rclone/rclone.conf
+        echo "type = drive" >> ~/.config/rclone/rclone.conf
+        echo "scope = drive" >> ~/.config/rclone/rclone.conf
+        echo "token = '$GDRIVE_TOKEN'" >> ~/.config/rclone/rclone.conf
+
         rclone copy co_mobile_ft_vac_samsung_final.csv gdrive: --drive-root-folder-id "$FOLDER_ID"
-        rclone copy co_mobile_ft_vac_generico_final.csv gdrive: --drive-root-folder-id "$FOLDER_ID"        
+        rclone copy co_mobile_ft_vac_generico_final.csv gdrive: --drive-root-folder-id "$FOLDER_ID"       
