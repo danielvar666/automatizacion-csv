@@ -20,6 +20,9 @@ on:
         required: true
         default: 'ventaft_generico'
 
+permissions:
+  contents: write
+
 jobs:
   procesar:
     runs-on: ubuntu-latest
@@ -43,10 +46,8 @@ jobs:
     - name: Ejecutar Script 1 (Segmentación y Memoria)
       run: |
         python -c "
-        import os
         cant_s = '${{ inputs.cant_samsung }}'
         cant_g = '${{ inputs.cant_generico }}'
-        # Simular entradas para input()
         with open('inputs.txt', 'w') as f:
             f.write(f'{cant_s}\n{cant_g}\n')
         "
@@ -57,7 +58,6 @@ jobs:
         python -c "
         grupo_s = '${{ inputs.grupo_samsung }}'
         grupo_g = '${{ inputs.grupo_generico }}'
-        # Simular entradas para input()
         with open('inputs_s2.txt', 'w') as f:
             f.write(f'{grupo_s}\n{grupo_g}\n')
         "
@@ -69,6 +69,6 @@ jobs:
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git add estado.json co_mobile_ft_vac_samsung_final.csv co_mobile_ft_vac_generico_final.csv
+        git add estado.json co_mobile_ft_vac_samsung_final.csv co_mobile_ft_vac_generico_final.csv generico_output.csv samsung_output.csv || true
         git commit -m "Automático: Actualizar estado.json y generar archivos finales" || exit 0
         git push
