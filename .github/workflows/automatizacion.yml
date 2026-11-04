@@ -72,18 +72,11 @@ jobs:
         git add estado.json co_mobile_ft_vac_samsung_final.csv co_mobile_ft_vac_generico_final.csv generico_output.csv samsung_output.csv || true
         git commit -m "Automático: Actualizar estado.json y generar archivos finales" || exit 0
         git push
-    - name: Configurar Rclone y Subir a Google Drive
-      env:
-        GDRIVE_TOKEN: ${{ secrets.RCLONE_CONFIG_GDRIVE_TOKEN }}
-        FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+    - name: Guardar estado y resultados en GitHub
       run: |
-        sudo apt-get update && sudo apt-get install -y rclone
-
-        mkdir -p ~/.config/rclone
-        echo "[gdrive]" > ~/.config/rclone/rclone.conf
-        echo "type = drive" >> ~/.config/rclone/rclone.conf
-        echo "scope = drive" >> ~/.config/rclone/rclone.conf
-        echo "token = '$GDRIVE_TOKEN'" >> ~/.config/rclone/rclone.conf
-
-        rclone copy co_mobile_ft_vac_samsung_final.csv gdrive: --drive-root-folder-id "$FOLDER_ID"
-        rclone copy co_mobile_ft_vac_generico_final.csv gdrive: --drive-root-folder-id "$FOLDER_ID"       
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git add estado.json co_mobile_ft_vac_samsung_final.csv co_mobile_ft_vac_generico_final.csv
+        git commit -m "Automático: Actualizar estado.json y generar archivos finales" || exit 0
+        git pull origin main --rebase
+        git push
