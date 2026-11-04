@@ -63,20 +63,19 @@ jobs:
         "
         python script2.py < inputs_s2.txt
 
-    - name: Guardar estado y resultados en GitHub
+    - name: Configurar Rclone y Subir a Google Drive
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GDRIVE_TOKEN: ${{ secrets.RCLONE_CONFIG_GDRIVE_TOKEN }}
+        FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
       run: |
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git add estado.json co_mobile_ft_vac_samsung_final.csv co_mobile_ft_vac_generico_final.csv generico_output.csv samsung_output.csv || true
-        git commit -m "Automático: Actualizar estado.json y generar archivos finales" || exit 0
-        git push
-    - name: Guardar estado y resultados en GitHub
-      run: |
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git add estado.json co_mobile_ft_vac_samsung_final.csv co_mobile_ft_vac_generico_final.csv
-        git commit -m "Automático: Actualizar estado.json y generar archivos finales" || exit 0
-        git pull origin main --rebase
-        git push
+        sudo apt-get update && sudo apt-get install -y rclone
+
+        mkdir -p ~/.config/rclone
+        echo "[gdrive]" > ~/.config/rclone/rclone.conf
+        echo "type = drive" >> ~/.config/rclone/rclone.conf
+        echo "scope = drive" >> ~/.config/rclone/rclone.conf
+        echo "token = '$GDRIVE_TOKEN'" >> ~/.config/rclone/rclone.conf
+
+        # Subida con soporte para carpetas compartidas y resourcekey
+        rclone copy co_mobile_ft_vac_samsung_final.csv gdrive: --drive-root-folder-id "$FOLDER_ID" --drive-resource-key "0-KuiYlPVhn26PQ9rI5hh5GA" -v
+        rclone copy co_mobile_ft_vac_generico_final.csv gdrive: --drive-root-folder-id "$FOLDER_ID" --drive-resource-key "0-KuiYlPVhn26PQ9rI5hh5GA" -v
