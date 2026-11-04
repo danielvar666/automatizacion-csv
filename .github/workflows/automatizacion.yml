@@ -73,6 +73,6 @@ jobs:
         mkdir -p ~/.config/rclone
         printf '[gdrive]\ntype = drive\nscope = drive\ntoken = %s\n' "$GDRIVE_TOKEN" > ~/.config/rclone/rclone.conf
 
-        # Subida limpia a tu carpeta propia
+        # Subida limpia a tu carpeta propia sin flags adicionales
         rclone copy co_mobile_ft_vac_samsung_final.csv gdrive: --drive-root-folder-id "$FOLDER_ID" -v
         rclone copy co_mobile_ft_vac_generico_final.csv gdrive: --drive-root-folder-id "$FOLDER_ID" -v
