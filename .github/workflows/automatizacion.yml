@@ -71,11 +71,10 @@ jobs:
         sudo apt-get update && sudo apt-get install -y rclone
 
         mkdir -p ~/.config/rclone
-        echo "[gdrive]" > ~/.config/rclone/rclone.conf
-        echo "type = drive" >> ~/.config/rclone/rclone.conf
-        echo "scope = drive" >> ~/.config/rclone/rclone.conf
-        echo "token = '$GDRIVE_TOKEN'" >> ~/.config/rclone/rclone.conf
+        
+        # Escribir la configuración de Rclone de forma segura usando printf
+        printf '[gdrive]\ntype = drive\nscope = drive\ntoken = %s\n' "$GDRIVE_TOKEN" > ~/.config/rclone/rclone.conf
 
-        # Subida con soporte para carpetas compartidas y resourcekey
+        # Subir los archivos CSV a la carpeta destino de Google Drive
         rclone copy co_mobile_ft_vac_samsung_final.csv gdrive: --drive-root-folder-id "$FOLDER_ID" --drive-resource-key "0-KuiYlPVhn26PQ9rI5hh5GA" -v
         rclone copy co_mobile_ft_vac_generico_final.csv gdrive: --drive-root-folder-id "$FOLDER_ID" --drive-resource-key "0-KuiYlPVhn26PQ9rI5hh5GA" -v
