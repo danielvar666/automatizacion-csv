@@ -8,7 +8,7 @@ st.set_page_config(
 
 st.title("📊 Procesamiento de Datos CSV")
 st.markdown(
-    "Configura las cantidades y los filtros de grupo para Samsung y Genérico antes de iniciar la automatización."
+    "Ingresa las cantidades de registros y escribe los filtros de grupo para Samsung y Genérico antes de iniciar la automatización."
 )
 
 st.divider()
@@ -28,10 +28,10 @@ with st.form("pipeline_form"):
             step=50,
         )
     with col2:
-        filtro_grupo_samsung = st.selectbox(
+        filtro_grupo_samsung = st.text_input(
             "Filtro Grupo Samsung",
-            options=["TODOS", "VACUNADO", "NO_VACUNADO", "PENDIENTE"],
-            help="Filtro que se aplicará al conjunto de datos Samsung",
+            value="VACUNADO",
+            help="Escribe el texto exacto con el que deseas filtrar la columna de grupo para Samsung",
         )
 
     st.divider()
@@ -48,10 +48,10 @@ with st.form("pipeline_form"):
             step=50,
         )
     with col4:
-        filtro_grupo_generico = st.selectbox(
+        filtro_grupo_generico = st.text_input(
             "Filtro Grupo Genérico",
-            options=["TODOS", "VACUNADO", "NO_VACUNADO", "PENDIENTE"],
-            help="Filtro que se aplicará al conjunto de datos Genérico",
+            value="GENERICO_LOTE1",
+            help="Escribe el texto exacto con el que deseas filtrar la columna de grupo para Genérico",
         )
 
     st.divider()
@@ -79,7 +79,6 @@ if submitted:
                 "X-GitHub-Api-Version": "2022-11-28",
             }
 
-            # Se envían los 4 parámetros al workflow
             payload = {
                 "ref": "main",
                 "inputs": {
@@ -94,7 +93,7 @@ if submitted:
 
             if response.status_code == 204:
                 st.success(
-                    "✅ ¡Proceso iniciado con éxito! El pipeline se ejecutará con los 4 filtros seleccionados."
+                    "✅ ¡Proceso iniciado con éxito! El pipeline se ejecutará con los filtros de texto ingresados."
                 )
             else:
                 st.error(
