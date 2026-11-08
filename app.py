@@ -61,15 +61,14 @@ with st.form("pipeline_form"):
     )
 
 if submitted:
-    # 1. Obtención prioritaria desde st.secrets
+    # 1. Lectura segura desde st.secrets / os.getenv
     github_token = st.secrets.get("GH_PAT", os.getenv("GH_PAT", "")).strip()
     repo_owner = st.secrets.get("GH_OWNER", os.getenv("GH_OWNER", "")).strip()
     repo_name = st.secrets.get("GH_REPO", os.getenv("GH_REPO", "")).strip()
 
-    # 2. Control de errores ante variables vacías
     if not github_token or not repo_owner or not repo_name:
         st.error(
-            "❌ Error: Faltan secretos en Streamlit Cloud. Asegúrate de guardar GH_PAT, GH_OWNER y GH_REPO en 'Configuración avanzada > Misterios'."
+            "❌ Error: Faltan secretos en Streamlit Cloud. Revisa que GH_PAT, GH_OWNER y GH_REPO estén definidos en la pestaña Secrets."
         )
     else:
         url = f"https://api.github.org/repos/{repo_owner}/{repo_name}/actions/workflows/automatizacion.yml/dispatches"
@@ -90,10 +89,11 @@ if submitted:
             },
         }
 
-        with st.spinner("Enviando parámetros a GitHub Actions..."):
+        with st.spinner("Enviando orden a GitHub Actions..."):
             try:
+                # Realizar petición POST con timeout
                 response = requests.post(
-                    url, json=payload, headers=headers, timeout=10
+                    url, json=payload, headers=headers, timeout=15
                 )
 
                 if response.status_code == 204:
@@ -106,5 +106,5 @@ if submitted:
                     )
             except requests.exceptions.RequestException as e:
                 st.error(
-                    f"❌ Error de red al intentar conectar a la API ({url}): {e}"
+                    f"❌ Error de red al conectar con GitHub API. Confirma que el servidor de Streamlit tenga salida a internet activa: {e}"
                 )
