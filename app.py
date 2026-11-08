@@ -61,42 +61,50 @@ with st.form("pipeline_form"):
     )
 
 if submitted:
-    github_token = os.getenv("GH_PAT")
-    repo_owner = os.getenv("GH_OWNER")
-    repo_name = os.getenv("GH_REPO")
+    # 1. Obtención prioritaria desde st.secrets
+    github_token = st.secrets.get("GH_PAT", os.getenv("GH_PAT", "")).strip()
+    repo_owner = st.secrets.get("GH_OWNER", os.getenv("GH_OWNER", "")).strip()
+    repo_name = st.secrets.get("GH_REPO", os.getenv("GH_REPO", "")).strip()
 
-    if not all([github_token, repo_owner, repo_name]):
+    # 2. Control de errores ante variables vacías
+    if not github_token or not repo_owner or not repo_name:
         st.error(
-            "❌ Faltan las variables secretas en Streamlit (GH_PAT, GH_OWNER, GH_REPO)."
+            "❌ Error: Faltan secretos en Streamlit Cloud. Asegúrate de guardar GH_PAT, GH_OWNER y GH_REPO en 'Configuración avanzada > Misterios'."
         )
     else:
+        url = f"https://api.github.org/repos/{repo_owner}/{repo_name}/actions/workflows/automatizacion.yml/dispatches"
+
+        headers = {
+            "Authorization": f"Bearer {github_token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+
+        payload = {
+            "ref": "main",
+            "inputs": {
+                "cantidad_samsung": str(cant_samsung),
+                "filtro_grupo_samsung": filtro_grupo_samsung,
+                "cantidad_generico": str(cant_generico),
+                "filtro_grupo_generico": filtro_grupo_generico,
+            },
+        }
+
         with st.spinner("Enviando parámetros a GitHub Actions..."):
-            url = f"https://api.github.org/repos/{repo_owner}/{repo_name}/actions/workflows/automatizacion.yml/dispatches"
-
-            headers = {
-                "Authorization": f"Bearer {github_token}",
-                "Accept": "application/vnd.github+json",
-                "X-GitHub-Api-Version": "2022-11-28",
-            }
-
-            payload = {
-                "ref": "main",
-                "inputs": {
-                    "cantidad_samsung": str(cant_samsung),
-                    "filtro_grupo_samsung": filtro_grupo_samsung,
-                    "cantidad_generico": str(cant_generico),
-                    "filtro_grupo_generico": filtro_grupo_generico,
-                },
-            }
-
-            response = requests.post(url, json=payload, headers=headers)
-
-            if response.status_code == 204:
-                st.success(
-                    "✅ ¡Proceso iniciado con éxito! El pipeline se ejecutará con los filtros de texto ingresados."
+            try:
+                response = requests.post(
+                    url, json=payload, headers=headers, timeout=10
                 )
-            else:
+
+                if response.status_code == 204:
+                    st.success(
+                        "✅ ¡Proceso iniciado con éxito! El pipeline se está ejecutando en GitHub Actions."
+                    )
+                else:
+                    st.error(
+                        f"❌ Error devuelto por GitHub ({response.status_code}): {response.text}"
+                    )
+            except requests.exceptions.RequestException as e:
                 st.error(
-                    f"❌ Error al iniciar. Código HTTP: {response.status_code}"
+                    f"❌ Error de red al intentar conectar a la API ({url}): {e}"
                 )
-                st.write(response.text)
