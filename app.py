@@ -2,61 +2,75 @@ import os
 import requests
 import streamlit as st
 
-# Configuración visual de la interfaz
 st.set_page_config(
     page_title="Panel de Control - Procesamiento CSV", page_icon="📊"
 )
 
 st.title("📊 Procesamiento de Datos CSV")
 st.markdown(
-    "Selecciona los parámetros del lote para ejecutar la automatización en el servidor."
+    "Configura las cantidades y los filtros de grupo para Samsung y Genérico antes de iniciar la automatización."
 )
 
 st.divider()
 
-# Formulario interactivo
 with st.form("pipeline_form"):
-    st.subheader("⚙️ Configuración del Lote")
+    st.subheader("⚙️ Configuración de Lotes y Filtros")
 
-    cantidad_samsung = st.number_input(
-        "Cantidad de registros Samsung",
-        min_value=1,
-        max_value=50000,
-        value=100,
-        step=50,
-    )
+    # --- SECCIÓN SAMSUNG ---
+    st.markdown("### 📱 Lote Samsung")
+    col1, col2 = st.columns(2)
+    with col1:
+        cant_samsung = st.number_input(
+            "Cantidad Samsung",
+            min_value=1,
+            max_value=100000,
+            value=100,
+            step=50,
+        )
+    with col2:
+        filtro_grupo_samsung = st.selectbox(
+            "Filtro Grupo Samsung",
+            options=["TODOS", "VACUNADO", "NO_VACUNADO", "PENDIENTE"],
+            help="Filtro que se aplicará al conjunto de datos Samsung",
+        )
 
-    cantidad_generico = st.number_input(
-        "Cantidad de registros Genérico",
-        min_value=1,
-        max_value=50000,
-        value=100,
-        step=50,
-    )
+    st.divider()
 
-    grupo_nombre = st.text_input(
-        "Etiqueta o Nombre del Grupo",
-        value="LOTE_DIARIO",
-        help="Identificador que se asignará en la columna grupo_nombre",
-    )
+    # --- SECCIÓN GENÉRICO ---
+    st.markdown("### 🌐 Lote Genérico")
+    col3, col4 = st.columns(2)
+    with col3:
+        cant_generico = st.number_input(
+            "Cantidad Genérico",
+            min_value=1,
+            max_value=100000,
+            value=100,
+            step=50,
+        )
+    with col4:
+        filtro_grupo_generico = st.selectbox(
+            "Filtro Grupo Genérico",
+            options=["TODOS", "VACUNADO", "NO_VACUNADO", "PENDIENTE"],
+            help="Filtro que se aplicará al conjunto de datos Genérico",
+        )
+
+    st.divider()
 
     submitted = st.form_submit_button(
         "🚀 Disparar Procesamiento", use_container_width=True
     )
 
-# Acción al presionar el botón
 if submitted:
-    # Obtener variables de entorno (guardadas de forma segura en Streamlit Cloud)
     github_token = os.getenv("GH_PAT")
-    repo_owner = os.getenv("GH_OWNER")  # Tu usuario de GitHub
-    repo_name = os.getenv("GH_REPO")  # Nombre del repositorio
+    repo_owner = os.getenv("GH_OWNER")
+    repo_name = os.getenv("GH_REPO")
 
     if not all([github_token, repo_owner, repo_name]):
         st.error(
-            "❌ Faltan credenciales de entorno (GH_PAT, GH_OWNER, GH_REPO)."
+            "❌ Faltan las variables secretas en Streamlit (GH_PAT, GH_OWNER, GH_REPO)."
         )
     else:
-        with st.spinner("Enviando orden a GitHub Actions..."):
+        with st.spinner("Enviando parámetros a GitHub Actions..."):
             url = f"https://api.github.org/repos/{repo_owner}/{repo_name}/actions/workflows/automatizacion.yml/dispatches"
 
             headers = {
@@ -65,12 +79,14 @@ if submitted:
                 "X-GitHub-Api-Version": "2022-11-28",
             }
 
+            # Se envían los 4 parámetros al workflow
             payload = {
                 "ref": "main",
                 "inputs": {
-                    "cantidad_samsung": str(cantidad_samsung),
-                    "cantidad_generico": str(cantidad_generico),
-                    "grupo_nombre": grupo_nombre,
+                    "cantidad_samsung": str(cant_samsung),
+                    "filtro_grupo_samsung": filtro_grupo_samsung,
+                    "cantidad_generico": str(cant_generico),
+                    "filtro_grupo_generico": filtro_grupo_generico,
                 },
             }
 
@@ -78,10 +94,10 @@ if submitted:
 
             if response.status_code == 204:
                 st.success(
-                    "✅ ¡Proceso iniciado con éxito! El pipeline se está ejecutando en GitHub y subirá los archivos a Google Drive al finalizar."
+                    "✅ ¡Proceso iniciado con éxito! El pipeline se ejecutará con los 4 filtros seleccionados."
                 )
             else:
                 st.error(
-                    f"❌ Error al iniciar el flujo. Código HTTP: {response.status_code}"
+                    f"❌ Error al iniciar. Código HTTP: {response.status_code}"
                 )
                 st.write(response.text)
