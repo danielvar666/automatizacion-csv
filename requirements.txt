@@ -1,3 +1,5 @@
 pandas
 openpyxl
 pytest
+streamlit
+requests
