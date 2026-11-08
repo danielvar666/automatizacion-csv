@@ -1,7 +1,13 @@
+import os
+import requests
+import streamlit as st
+
+# (Tu código de configuración y formulario va aquí arriba...)
+
 if submitted:
-    # Lectura compatible tanto con Render (os.getenv) como con Streamlit Cloud (st.secrets)
+    # Función auxiliar para leer variables sin romper la ejecución
     def get_secret(key):
-        # 1. Intentar obtener desde las variables de entorno de Render/Sistema
+        # 1. Intentar obtener desde variables de entorno del sistema (Render, local, etc.)
         val = os.getenv(key)
         if val:
             return val
@@ -17,7 +23,7 @@ if submitted:
 
     if not github_token or not repo_owner or not repo_name:
         st.error(
-            "❌ Error: Faltan credenciales. Asegúrate de configurarlas en 'Environment Variables' en Render."
+            "❌ Error: Faltan credenciales. Revisa la sección 'Environment Variables' en Render."
         )
     else:
         url = f"https://api.github.org/repos/{repo_owner}/{repo_name}/actions/workflows/automatizacion.yml/dispatches"
@@ -46,11 +52,11 @@ if submitted:
 
                 if response.status_code == 204:
                     st.success(
-                        "✅ ¡Proceso iniciado con éxito! El pipeline se está ejecutando en GitHub Actions."
+                        "✅ ¡Proceso iniciado con éxito en GitHub Actions!"
                     )
                 else:
                     st.error(
                         f"❌ Error devuelto por GitHub ({response.status_code}): {response.text}"
                     )
             except requests.exceptions.RequestException as e:
-                st.error(f"❌ Error de red al conectar con GitHub API: {e}")
+                st.error(f"❌ Error de conexión al intentar contactar la API: {e}")
