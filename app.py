@@ -1,19 +1,28 @@
 import os
 import requests
 import streamlit as st
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
+# 1. CONFIGURACIÓN DE PÁGINA Y SALUDO INICIAL (Se ejecuta al cargar la app)
 st.set_page_config(
-    page_title="Panel de Control - Procesamiento CSV", page_icon="📊"
+    page_title="Panel de Control - Procesamiento CSV",
+    page_icon="📊",
+    layout="centered",
 )
 
-st.title("📊 Procesamiento de Datos CSV")
+# ---------------------------------------------------------
+# SALUDO PRINCIPAL
+st.title("👋 ¡Bienvenido, Data Lovers!")
+st.subheader("📊 Panel de Control - Procesamiento de Datos CSV")
 st.markdown(
-    "Ingresa las cantidades de registros y escribe los filtros de grupo para Samsung y Genérico antes de iniciar la automatización."
+    "Ingresa las cantidades de registros y escribe los filtros de grupo para **Samsung** y **Genérico** antes de iniciar la automatización."
 )
+# ---------------------------------------------------------
 
 st.divider()
 
-# 1. DEFINICIÓN DEL FORMULARIO Y VARIABLES DE ENTRADA
+# 2. DEFINICIÓN DEL FORMULARIO
 with st.form("pipeline_form"):
     st.subheader("⚙️ Configuración de Lotes y Filtros")
 
@@ -57,14 +66,13 @@ with st.form("pipeline_form"):
 
     st.divider()
 
-    # AQUÍ SE DEFINE 'submitted' DENTRO DEL FORMULARIO
     submitted = st.form_submit_button(
         "🚀 Disparar Procesamiento", use_container_width=True
     )
 
-# 2. EVALUACIÓN Y DISPARO (DESPUÉS DEL FORMULARIO)
+# 3. EJECUCIÓN AL PRESIONAR EL BOTÓN
 if submitted:
-    # Función de lectura de credenciales compatible con Render y Streamlit Cloud
+
     def get_secret(key):
         val = os.getenv(key)
         if val:
@@ -80,9 +88,10 @@ if submitted:
 
     if not github_token or not repo_owner or not repo_name:
         st.error(
-            "❌ Error: Faltan credenciales. Revisa las variables de entorno en Render (GH_PAT, GH_OWNER, GH_REPO)."
+            "❌ Error: Faltan credenciales. Revisa 'Environment' en Render."
         )
     else:
+        # Petición a la API de GitHub Actions
         url = f"https://api.github.org/repos/{repo_owner}/{repo_name}/actions/workflows/automatizacion.yml/dispatches"
 
         headers = {
@@ -103,7 +112,15 @@ if submitted:
 
         with st.spinner("Enviando orden a GitHub Actions..."):
             try:
-                response = requests.post(
+                session = requests.Session()
+                retries = Retry(
+                    total=3,
+                    backoff_factor=1,
+                    status_forcelist=[500, 502, 503, 504],
+                )
+                session.mount("https://", HTTPAdapter(max_retries=retries))
+
+                response = session.post(
                     url, json=payload, headers=headers, timeout=15
                 )
 
