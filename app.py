@@ -1,10 +1,11 @@
 import os
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# 1. CONFIGURACIÓN DE PÁGINA Y SALUDO INICIAL (Se ejecuta al cargar la app)
+# 1. CONFIGURACIÓN DE LA PÁGINA
 st.set_page_config(
     page_title="Panel de Control - Procesamiento CSV",
     page_icon="📊",
@@ -12,8 +13,35 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# SALUDO PRINCIPAL
+# 2. SALUDO VISUAL Y REPRODUCCIÓN DE AUDIO (TEXT-TO-SPEECH)
 st.title("👋 ¡Bienvenido, Data Lovers!")
+
+# Script JavaScript para voz automática al cargar
+audio_script = """
+    <script>
+        window.addEventListener('DOMContentLoaded', (event) => {
+            const text = "¡Bienvenido, Data Lovers!";
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'es-ES';
+            utterance.rate = 1.0;
+            window.speechSynthesis.speak(utterance);
+        });
+    </script>
+"""
+components.html(audio_script, height=0)
+
+# Botón manual por si el navegador bloquea el autoplay de audio
+if st.button("🔊 Escuchar Saludo"):
+    audio_click = """
+        <script>
+            const text = "¡Bienvenido, Data Lovers!";
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'es-ES';
+            window.speechSynthesis.speak(utterance);
+        </script>
+    """
+    components.html(audio_click, height=0)
+
 st.subheader("📊 Panel de Control - Procesamiento de Datos CSV")
 st.markdown(
     "Ingresa las cantidades de registros y escribe los filtros de grupo para **Samsung** y **Genérico** antes de iniciar la automatización."
@@ -22,7 +50,7 @@ st.markdown(
 
 st.divider()
 
-# 2. DEFINICIÓN DEL FORMULARIO
+# 3. FORMULARIO DE CONFIGURACIÓN
 with st.form("pipeline_form"):
     st.subheader("⚙️ Configuración de Lotes y Filtros")
 
@@ -70,9 +98,9 @@ with st.form("pipeline_form"):
         "🚀 Disparar Procesamiento", use_container_width=True
     )
 
-# 3. EJECUCIÓN AL PRESIONAR EL BOTÓN
+# 4. LÓGICA DE ENVÍO Y COMUNICACIÓN CON GITHUB ACTIONS
 if submitted:
-
+    # Función dual para leer variables de entorno (Render) o secrets (Streamlit Cloud)
     def get_secret(key):
         val = os.getenv(key)
         if val:
@@ -88,10 +116,9 @@ if submitted:
 
     if not github_token or not repo_owner or not repo_name:
         st.error(
-            "❌ Error: Faltan credenciales. Revisa 'Environment' en Render."
+            "❌ Error: Faltan credenciales. Verifica 'Environment Variables' en Render (GH_PAT, GH_OWNER, GH_REPO)."
         )
     else:
-        # Petición a la API de GitHub Actions
         url = f"https://api.github.org/repos/{repo_owner}/{repo_name}/actions/workflows/automatizacion.yml/dispatches"
 
         headers = {
@@ -112,6 +139,7 @@ if submitted:
 
         with st.spinner("Enviando orden a GitHub Actions..."):
             try:
+                # Sesión con reintentos para estabilizar resoluciones de red
                 session = requests.Session()
                 retries = Retry(
                     total=3,
