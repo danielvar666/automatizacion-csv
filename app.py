@@ -5,6 +5,7 @@ import streamlit.components.v1 as components
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+# 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(
     page_title="Panel de Control - Procesamiento CSV",
     page_icon="📊",
@@ -14,30 +15,33 @@ st.set_page_config(
 st.title("👋 Panel de Control")
 
 # ---------------------------------------------------------
-# BOTÓN DE BIENVENIDA QUE DESBLOQUEA EL AUDIO
-if "audio_reproducido" not in st.session_state:
-    st.session_state.audio_reproducido = False
+# 2. BOTÓN DE SALUDO MEJORADO (Acceso a window.parent)
+st.subheader("¡Bienvenido, Data Lovers!")
 
-col_welcome, col_btn = st.columns([3, 1])
-with col_welcome:
-    st.subheader("¡Bienvenido, Data Lovers!")
-with col_btn:
-    if st.button("🔊 Activar Saludo", use_container_width=True):
-        st.session_state.audio_reproducido = True
-        components.html(
-            """
-            <script>
-                if ('speechSynthesis' in window) {
+if st.button("🔊 Activar Saludo de Bienvenida", use_container_width=True):
+    # Inyección de JS apuntando al marco principal del navegador
+    audio_js = """
+        <script>
+            (function() {
+                // Intentar ejecutar en la ventana principal o en la actual como respaldo
+                const targetWindow = window.parent || window;
+                if ('speechSynthesis' in targetWindow) {
+                    targetWindow.speechSynthesis.cancel();
+                    const msg = new targetWindow.SpeechSynthesisUtterance("¡Bienvenido, Data Lovers!");
+                    msg.lang = 'es-ES';
+                    msg.rate = 1.0;
+                    targetWindow.speechSynthesis.speak(msg);
+                } else if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
-                    const utterance = new SpeechSynthesisUtterance("¡Bienvenido, Data Lovers!");
-                    utterance.lang = 'es-ES';
-                    utterance.rate = 1.0;
-                    window.speechSynthesis.speak(utterance);
+                    const msg = new SpeechSynthesisUtterance("¡Bienvenido, Data Lovers!");
+                    msg.lang = 'es-ES';
+                    msg.rate = 1.0;
+                    window.speechSynthesis.speak(msg);
                 }
-            </script>
-            """,
-            height=0,
-        )
+            })();
+        </script>
+    """
+    components.html(audio_js, height=0)
 
 st.markdown(
     "Ingresa las cantidades de registros y escribe los filtros de grupo para **Samsung** y **Genérico** antes de iniciar la automatización."
@@ -46,32 +50,46 @@ st.markdown(
 
 st.divider()
 
-# (Formulario normal de Streamlit abajo)
+# 3. FORMULARIO DE CONFIGURACIÓN
 with st.form("pipeline_form"):
     st.subheader("⚙️ Configuración de Lotes y Filtros")
 
+    # --- SECCIÓN SAMSUNG ---
     st.markdown("### 📱 Lote Samsung")
     col1, col2 = st.columns(2)
     with col1:
         cant_samsung = st.number_input(
-            "Cantidad Samsung", min_value=1, max_value=100000, value=100
+            "Cantidad Samsung",
+            min_value=1,
+            max_value=100000,
+            value=100,
+            step=50,
         )
     with col2:
         filtro_grupo_samsung = st.text_input(
-            "Filtro Grupo Samsung", value="VACUNADO"
+            "Filtro Grupo Samsung",
+            value="VACUNADO",
+            help="Escribe el texto exacto con el que deseas filtrar la columna de grupo para Samsung",
         )
 
     st.divider()
 
+    # --- SECCIÓN GENÉRICO ---
     st.markdown("### 🌐 Lote Genérico")
     col3, col4 = st.columns(2)
     with col3:
         cant_generico = st.number_input(
-            "Cantidad Genérico", min_value=1, max_value=100000, value=100
+            "Cantidad Genérico",
+            min_value=1,
+            max_value=100000,
+            value=100,
+            step=50,
         )
     with col4:
         filtro_grupo_generico = st.text_input(
-            "Filtro Grupo Genérico", value="GENERICO_LOTE1"
+            "Filtro Grupo Genérico",
+            value="GENERICO_LOTE1",
+            help="Escribe el texto exacto con el que deseas filtrar la columna de grupo para Genérico",
         )
 
     st.divider()
@@ -80,6 +98,7 @@ with st.form("pipeline_form"):
         "🚀 Disparar Procesamiento", use_container_width=True
     )
 
+# 4. LÓGICA DE ENVÍO A GITHUB ACTIONS
 if submitted:
 
     def get_secret(key):
@@ -96,14 +115,18 @@ if submitted:
     repo_name = get_secret("GH_REPO").strip()
 
     if not github_token or not repo_owner or not repo_name:
-        st.error("❌ Error: Faltan credenciales en Render.")
+        st.error(
+            "❌ Error: Faltan credenciales. Verifica 'Environment Variables' en Render (GH_PAT, GH_OWNER, GH_REPO)."
+        )
     else:
         url = f"https://api.github.org/repos/{repo_owner}/{repo_name}/actions/workflows/automatizacion.yml/dispatches"
+
         headers = {
             "Authorization": f"Bearer {github_token}",
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
         }
+
         payload = {
             "ref": "main",
             "inputs": {
@@ -129,8 +152,12 @@ if submitted:
                 )
 
                 if response.status_code == 204:
-                    st.success("✅ ¡Proceso iniciado con éxito!")
+                    st.success(
+                        "✅ ¡Proceso iniciado con éxito! El pipeline se está ejecutando en GitHub Actions."
+                    )
                 else:
-                    st.error(f"❌ Error HTTP {response.status_code}")
+                    st.error(
+                        f"❌ Error devuelto por GitHub ({response.status_code}): {response.text}"
+                    )
             except requests.exceptions.RequestException as e:
-                st.error(f"❌ Error de conexión: {e}")
+                st.error(f"❌ Error de red al conectar con GitHub API: {e}")
