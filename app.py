@@ -13,31 +13,45 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. SALUDO VISUAL Y REPRODUCCIÓN DE AUDIO (TEXT-TO-SPEECH)
+# 2. SALUDO VISUAL Y REPRODUCCIÓN DE AUDIO MEJORADA
 st.title("👋 ¡Bienvenido, Data Lovers!")
 
-# Script JavaScript para voz automática al cargar
+# Script JavaScript: Intenta hablar al cargar y escucha el primer clic en cualquier parte de la pantalla
 audio_script = """
     <script>
-        window.addEventListener('DOMContentLoaded', (event) => {
-            const text = "¡Bienvenido, Data Lovers!";
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'es-ES';
-            utterance.rate = 1.0;
-            window.speechSynthesis.speak(utterance);
-        });
+        function hablar() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Limpiar cola previa
+                const text = "¡Bienvenido, Data Lovers!";
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'es-ES';
+                utterance.rate = 1.0;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // Intento directo al cargar
+        window.addEventListener('load', hablar);
+
+        // Desbloqueo automático al primer clic del usuario en cualquier parte de la web
+        document.addEventListener('click', function reproduceOnFirstClick() {
+            hablar();
+            document.removeEventListener('click', reproduceOnFirstClick);
+        }, { once: true });
     </script>
 """
 components.html(audio_script, height=0)
 
-# Botón manual por si el navegador bloquea el autoplay de audio
+# Botón opcional de respaldo
 if st.button("🔊 Escuchar Saludo"):
     audio_click = """
         <script>
-            const text = "¡Bienvenido, Data Lovers!";
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'es-ES';
-            window.speechSynthesis.speak(utterance);
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance("¡Bienvenido, Data Lovers!");
+                utterance.lang = 'es-ES';
+                window.speechSynthesis.speak(utterance);
+            }
         </script>
     """
     components.html(audio_click, height=0)
@@ -100,7 +114,6 @@ with st.form("pipeline_form"):
 
 # 4. LÓGICA DE ENVÍO Y COMUNICACIÓN CON GITHUB ACTIONS
 if submitted:
-    # Función dual para leer variables de entorno (Render) o secrets (Streamlit Cloud)
     def get_secret(key):
         val = os.getenv(key)
         if val:
@@ -139,7 +152,6 @@ if submitted:
 
         with st.spinner("Enviando orden a GitHub Actions..."):
             try:
-                # Sesión con reintentos para estabilizar resoluciones de red
                 session = requests.Session()
                 retries = Retry(
                     total=3,
