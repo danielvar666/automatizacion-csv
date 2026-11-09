@@ -13,15 +13,20 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. SALUDO VISUAL Y REPRODUCCIÓN DE AUDIO MEJORADA
+# 2. SALUDO VISUAL Y REPRODUCCIÓN DE AUDIO
 st.title("👋 ¡Bienvenido, Data Lovers!")
 
-# Script JavaScript: Intenta hablar al cargar y escucha el primer clic en cualquier parte de la pantalla
+# Banner informativo para informar sobre el audio
+st.info(
+    "💡 *Haz un clic en cualquier parte de la pantalla para escuchar el saludo de bienvenida.*"
+)
+
+# Script JavaScript: Se activa con cualquier clic o toque en la pantalla
 audio_script = """
     <script>
-        function hablar() {
+        function reproducirSaludo() {
             if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel(); // Limpiar cola previa
+                window.speechSynthesis.cancel(); // Limpia la cola por si hay otros audios
                 const text = "¡Bienvenido, Data Lovers!";
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'es-ES';
@@ -30,20 +35,17 @@ audio_script = """
             }
         }
 
-        // Intento directo al cargar
-        window.addEventListener('load', hablar);
-
-        // Desbloqueo automático al primer clic del usuario en cualquier parte de la web
-        document.addEventListener('click', function reproduceOnFirstClick() {
-            hablar();
-            document.removeEventListener('click', reproduceOnFirstClick);
+        // Escuchar el primer clic en cualquier zona de la aplicación
+        document.addEventListener('click', function primerClic() {
+            reproducirSaludo();
+            document.removeEventListener('click', primerClic);
         }, { once: true });
     </script>
 """
 components.html(audio_script, height=0)
 
-# Botón opcional de respaldo
-if st.button("🔊 Escuchar Saludo"):
+# Botón de respaldo directo
+if st.button("🔊 Escuchar Saludo Manualmente"):
     audio_click = """
         <script>
             if ('speechSynthesis' in window) {
@@ -82,7 +84,7 @@ with st.form("pipeline_form"):
     with col2:
         filtro_grupo_samsung = st.text_input(
             "Filtro Grupo Samsung",
-            value="VACUNADO",
+            value="ingrese",
             help="Escribe el texto exacto con el que deseas filtrar la columna de grupo para Samsung",
         )
 
@@ -102,7 +104,7 @@ with st.form("pipeline_form"):
     with col4:
         filtro_grupo_generico = st.text_input(
             "Filtro Grupo Genérico",
-            value="GENERICO_LOTE1",
+            value="ingrese",
             help="Escribe el texto exacto con el que deseas filtrar la columna de grupo para Genérico",
         )
 
@@ -114,6 +116,7 @@ with st.form("pipeline_form"):
 
 # 4. LÓGICA DE ENVÍO Y COMUNICACIÓN CON GITHUB ACTIONS
 if submitted:
+
     def get_secret(key):
         val = os.getenv(key)
         if val:
