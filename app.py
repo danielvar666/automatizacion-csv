@@ -68,7 +68,7 @@ with st.form("pipeline_form"):
     with col2:
         filtro_grupo_samsung = st.text_input(
             "Filtro Grupo Samsung",
-            value="VACUNADO",
+            value="ingrese",
             help="Escribe el texto exacto con el que deseas filtrar la columna de grupo para Samsung",
         )
 
@@ -79,7 +79,7 @@ with st.form("pipeline_form"):
     col3, col4 = st.columns(2)
     with col3:
         cant_generico = st.number_input(
-            "Cantidad Genérico",
+            "ingrese",
             min_value=1,
             max_value=100000,
             value=100,
@@ -88,7 +88,7 @@ with st.form("pipeline_form"):
     with col4:
         filtro_grupo_generico = st.text_input(
             "Filtro Grupo Genérico",
-            value="GENERICO_LOTE1",
+            value="ingrese",
             help="Escribe el texto exacto con el que deseas filtrar la columna de grupo para Genérico",
         )
 
