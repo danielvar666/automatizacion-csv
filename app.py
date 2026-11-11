@@ -6,7 +6,7 @@ import streamlit.components.v1 as components
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# 1. CONFIGURACIÓN DE PÁGINA (Debe ser la primera instrucción de Streamlit)
+# 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(
     page_title="Panel de Control - Procesamiento CSV",
     page_icon="📊",
@@ -15,7 +15,7 @@ st.set_page_config(
 
 
 # ---------------------------------------------------------
-# 2. LOGO SUPERIOR Y ESTILOS DE ALTO CONTRASTE
+# 2. LOGO SUPERIOR Y ESTILOS DE ALTO CONTRASTE (CORREGIDO)
 # ---------------------------------------------------------
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, "rb") as f:
@@ -25,7 +25,6 @@ def get_base64_of_bin_file(bin_file):
 
 try:
     bin_str = get_base64_of_bin_file("fondo.jpg")
-    # Inyección de imagen en la parte superior + corrección de color de texto
     st.markdown(
         f"""
         <div style="text-align: center; margin-bottom: 25px;">
@@ -37,16 +36,16 @@ try:
 except Exception:
     pass
 
-# Estilos CSS para asegurar texto legible en modo claro y oscuro
+# Estilos CSS corregidos: Sin afectar el texto dentro de los botones
 st.markdown(
     """
     <style>
-    /* Forzar fondo limpio */
+    /* Fondo principal claro */
     [data-testid="stAppViewContainer"] {
         background-color: #f8fafc;
     }
-    
-    /* Contenedor principal estilizado */
+
+    /* Contenedor principal de la app */
     .stMainBlockContainer {
         background-color: #ffffff;
         padding: 2.5rem;
@@ -54,10 +53,32 @@ st.markdown(
         border: 1px solid #e2e8f0;
         box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
     }
-    
-    /* Color de textos contrastado */
-    h1, h2, h3, p, span, label {
+
+    /* Títulos y textos generales oscuros */
+    h1, h2, h3, .stMarkdown, p, label {
         color: #0f172a !important;
+    }
+
+    /* ESTILO EXPLICITO PARA LOS BOTONES: Fondo rosa/morado de Lax Tech con texto blanco */
+    div.stButton > button, div.stFormSubmitButton > button {
+        background-color: #e11d48 !important;
+        color: #ffffff !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 0.6rem 1rem !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+
+    /* Texto dentro de los botones en blanco obligatoriamente */
+    div.stButton > button * , div.stFormSubmitButton > button * {
+        color: #ffffff !important;
+    }
+
+    /* Efecto al pasar el cursor por el botón */
+    div.stButton > button:hover, div.stFormSubmitButton > button:hover {
+        background-color: #be123c !important;
+        color: #ffffff !important;
     }
     </style>
 """,
@@ -66,8 +87,6 @@ st.markdown(
 # ---------------------------------------------------------
 
 st.title("👋 Panel de Control")
-
-# 3. SALUDO DE BIENVENIDA (SpeechSynthesis en window.parent)
 st.subheader("¡Bienvenido, Data Lovers!")
 
 if st.button("🔊 Activar Saludo de Bienvenida", use_container_width=True):
@@ -81,12 +100,6 @@ if st.button("🔊 Activar Saludo de Bienvenida", use_container_width=True):
                     msg.lang = 'es-ES';
                     msg.rate = 1.0;
                     targetWindow.speechSynthesis.speak(msg);
-                } else if ('speechSynthesis' in window) {
-                    window.speechSynthesis.cancel();
-                    const msg = new SpeechSynthesisUtterance("¡Bienvenido, Data Lovers!");
-                    msg.lang = 'es-ES';
-                    msg.rate = 1.0;
-                    window.speechSynthesis.speak(msg);
                 }
             })();
         </script>
@@ -96,11 +109,9 @@ if st.button("🔊 Activar Saludo de Bienvenida", use_container_width=True):
 st.markdown(
     "Ingresa las cantidades de registros y escribe los filtros de grupo para **Samsung** y **Genérico** antes de iniciar la automatización."
 )
-# ---------------------------------------------------------
-
 st.divider()
 
-# 4. FORMULARIO DE CONFIGURACIÓN
+# 3. FORMULARIO DE CONFIGURACIÓN
 with st.form("pipeline_form"):
     st.subheader("⚙️ Configuración de Lotes y Filtros")
 
@@ -148,7 +159,7 @@ with st.form("pipeline_form"):
         "🚀 Disparar Procesamiento", use_container_width=True
     )
 
-# 5. LÓGICA DE ENVÍO A GITHUB ACTIONS
+# 4. LÓGICA DE ENVÍO A GITHUB ACTIONS
 if submitted:
 
     def get_secret(key):
