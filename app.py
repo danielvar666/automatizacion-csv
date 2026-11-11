@@ -1,3 +1,4 @@
+import base64
 import os
 import requests
 import streamlit as st
@@ -5,25 +6,60 @@ import streamlit.components.v1 as components
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# 1. CONFIGURACIÓN DE PÁGINA
+# 1. CONFIGURACIÓN DE PÁGINA (Debe ser la primera instrucción de Streamlit)
 st.set_page_config(
     page_title="Panel de Control - Procesamiento CSV",
     page_icon="📊",
     layout="centered",
 )
 
-st.title("👋 Panel de Control")
 
 # ---------------------------------------------------------
-# 2. BOTÓN DE SALUDO MEJORADO (Acceso a window.parent)
+# 2. INYECCIÓN DE ESTILOS CSS Y MARCA DE AGUA (fondo.jpg)
+# ---------------------------------------------------------
+def get_base64_of_bin_file(bin_file):
+    with open(bin_file, "rb") as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
+
+try:
+    bin_str = get_base64_of_bin_file("fondo.jpg")
+    page_bg_css = f"""
+    <style>
+    /* Fondo responsivo con la imagen del logo LAX Data Lovers */
+    [data-testid="stAppViewContainer"] {{
+        background-image: url("data:image/jpg;base64,{bin_str}");
+        background-size: contain;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        background-color: #ffffff;
+    }}
+
+    /* Estilo translúcido sobre el formulario para alta legibilidad */
+    .stMainBlockContainer {{
+        background-color: rgba(255, 255, 255, 0.92);
+        padding: 2.5rem;
+        border-radius: 12px;
+        box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.1);
+    }}
+    </style>
+    """
+    st.markdown(page_bg_css, unsafe_allow_html=True)
+except Exception:
+    pass  # Si la imagen no está en la raíz, la interfaz se renderiza sin errores
+# ---------------------------------------------------------
+
+st.title("👋 Panel de Control")
+
+# 3. SALUDO DE BIENVENIDA (SpeechSynthesis en window.parent)
 st.subheader("¡Bienvenido, Data Lovers!")
 
 if st.button("🔊 Activar Saludo de Bienvenida", use_container_width=True):
-    # Inyección de JS apuntando al marco principal del navegador
     audio_js = """
         <script>
             (function() {
-                // Intentar ejecutar en la ventana principal o en la actual como respaldo
                 const targetWindow = window.parent || window;
                 if ('speechSynthesis' in targetWindow) {
                     targetWindow.speechSynthesis.cancel();
@@ -50,7 +86,7 @@ st.markdown(
 
 st.divider()
 
-# 3. FORMULARIO DE CONFIGURACIÓN
+# 4. FORMULARIO DE CONFIGURACIÓN
 with st.form("pipeline_form"):
     st.subheader("⚙️ Configuración de Lotes y Filtros")
 
@@ -79,7 +115,7 @@ with st.form("pipeline_form"):
     col3, col4 = st.columns(2)
     with col3:
         cant_generico = st.number_input(
-            "ingrese",
+            "Cantidad Genérico",
             min_value=1,
             max_value=100000,
             value=100,
@@ -98,7 +134,7 @@ with st.form("pipeline_form"):
         "🚀 Disparar Procesamiento", use_container_width=True
     )
 
-# 4. LÓGICA DE ENVÍO A GITHUB ACTIONS
+# 5. LÓGICA DE ENVÍO A GITHUB ACTIONS
 if submitted:
 
     def get_secret(key):
