@@ -15,7 +15,7 @@ st.set_page_config(
 
 
 # ---------------------------------------------------------
-# 2. LOGO SUPERIOR Y ESTILOS DE ALTO CONTRASTE (CORREGIDO)
+# 2. LOGO SUPERIOR Y ESTILOS LIMPIOS (HEADER OCULTO)
 # ---------------------------------------------------------
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, "rb") as f:
@@ -27,8 +27,8 @@ try:
     bin_str = get_base64_of_bin_file("fondo.jpg")
     st.markdown(
         f"""
-        <div style="text-align: center; margin-bottom: 25px;">
-            <img src="data:image/jpg;base64,{bin_str}" style="max-width: 280px; height: auto;">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <img src="data:image/jpg;base64,{bin_str}" style="max-width: 240px; height: auto;">
         </div>
         """,
         unsafe_allow_html=True,
@@ -36,30 +36,43 @@ try:
 except Exception:
     pass
 
-# Estilos CSS corregidos: Sin afectar el texto dentro de los botones
 st.markdown(
     """
     <style>
-    /* Fondo principal claro */
+    /* 1. Ocultar la barra superior negra nativa de Streamlit */
+    header[data-testid="stHeader"] {
+        background-color: transparent !important;
+        background: none !important;
+    }
+    
+    /* 2. Fondo general de la página */
     [data-testid="stAppViewContainer"] {
-        background-color: #f8fafc;
+        background-color: #f1f5f9;
     }
 
-    /* Contenedor principal de la app */
+    /* 3. Tarjeta central limpia */
     .stMainBlockContainer {
         background-color: #ffffff;
         padding: 2.5rem;
         border-radius: 16px;
         border: 1px solid #e2e8f0;
-        box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
+        box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.06);
     }
 
-    /* Títulos y textos generales oscuros */
+    /* 4. Textos oscuros de alto contraste */
     h1, h2, h3, .stMarkdown, p, label {
         color: #0f172a !important;
     }
 
-    /* ESTILO EXPLICITO PARA LOS BOTONES: Fondo rosa/morado de Lax Tech con texto blanco */
+    /* 5. Cajas de entrada de texto e inputs en fondo claro y borde visible */
+    input[type="text"], input[type="number"], div[data-baseweb="input"] {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+    }
+
+    /* 6. Botones principales estilo LAX Tech */
     div.stButton > button, div.stFormSubmitButton > button {
         background-color: #e11d48 !important;
         color: #ffffff !important;
@@ -67,15 +80,12 @@ st.markdown(
         border-radius: 8px !important;
         padding: 0.6rem 1rem !important;
         font-weight: 600 !important;
-        transition: all 0.2s ease-in-out !important;
     }
 
-    /* Texto dentro de los botones en blanco obligatoriamente */
-    div.stButton > button * , div.stFormSubmitButton > button * {
+    div.stButton > button *, div.stFormSubmitButton > button * {
         color: #ffffff !important;
     }
 
-    /* Efecto al pasar el cursor por el botón */
     div.stButton > button:hover, div.stFormSubmitButton > button:hover {
         background-color: #be123c !important;
         color: #ffffff !important;
