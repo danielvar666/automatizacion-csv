@@ -15,7 +15,7 @@ st.set_page_config(
 
 
 # ---------------------------------------------------------
-# 2. INYECCIÓN DE ESTILOS CSS Y MARCA DE AGUA (fondo.jpg)
+# 2. LOGO SUPERIOR Y ESTILOS DE ALTO CONTRASTE
 # ---------------------------------------------------------
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, "rb") as f:
@@ -25,30 +25,44 @@ def get_base64_of_bin_file(bin_file):
 
 try:
     bin_str = get_base64_of_bin_file("fondo.jpg")
-    page_bg_css = f"""
-    <style>
-    /* Fondo responsivo con la imagen del logo LAX Data Lovers */
-    [data-testid="stAppViewContainer"] {{
-        background-image: url("data:image/jpg;base64,{bin_str}");
-        background-size: contain;
-        background-position: center;
-        background-repeat: no-repeat;
-        background-attachment: fixed;
-        background-color: #ffffff;
-    }}
-
-    /* Estilo translúcido sobre el formulario para alta legibilidad */
-    .stMainBlockContainer {{
-        background-color: rgba(255, 255, 255, 0.92);
-        padding: 2.5rem;
-        border-radius: 12px;
-        box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.1);
-    }}
-    </style>
-    """
-    st.markdown(page_bg_css, unsafe_allow_html=True)
+    # Inyección de imagen en la parte superior + corrección de color de texto
+    st.markdown(
+        f"""
+        <div style="text-align: center; margin-bottom: 25px;">
+            <img src="data:image/jpg;base64,{bin_str}" style="max-width: 280px; height: auto;">
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 except Exception:
-    pass  # Si la imagen no está en la raíz, la interfaz se renderiza sin errores
+    pass
+
+# Estilos CSS para asegurar texto legible en modo claro y oscuro
+st.markdown(
+    """
+    <style>
+    /* Forzar fondo limpio */
+    [data-testid="stAppViewContainer"] {
+        background-color: #f8fafc;
+    }
+    
+    /* Contenedor principal estilizado */
+    .stMainBlockContainer {
+        background-color: #ffffff;
+        padding: 2.5rem;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
+    }
+    
+    /* Color de textos contrastado */
+    h1, h2, h3, p, span, label {
+        color: #0f172a !important;
+    }
+    </style>
+""",
+    unsafe_allow_html=True,
+)
 # ---------------------------------------------------------
 
 st.title("👋 Panel de Control")
