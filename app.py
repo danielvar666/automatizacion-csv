@@ -384,8 +384,8 @@ if submitted:
 
                         if estado_final == "success":
                             fin_sam, fin_gen = obtener_indices_github(repo_owner, repo_name, headers)
-                            rango_sam = f"{ini_sam} - {fin_sam}" if ini_sam is not None and fin_sam is not None else "N/A"
-                            rango_gen = f"{ini_gen} - {fin_gen}" if ini_gen is not None and fin_gen is not None else "N/A"
+                            rango_sam = f"{ini_sam+1} - {fin_sam}" if ini_sam is not None and fin_sam is not None else "N/A"
+                            rango_gen = f"{ini_gen+1} - {fin_gen}" if ini_gen is not None and fin_gen is not None else "N/A"
 
                             st.success(
                                 f"✅ Proceso exitoso — Archivos generados y cargados a Google Drive por **{st.session_state.usuario_nombre}**."
