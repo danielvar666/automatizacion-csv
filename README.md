@@ -1,41 +1,37 @@
-# 🚀 Automatización y Procesamiento de Datos CSV con GitHub Actions
+# 🚀 Pipeline Automatizado DataOps: Procesamiento CSV, Portal Web y Auditoría
 
-Sistema de automatización en Python alojado en GitHub Actions para el procesamiento, segmentación diaria, formateo, control de calidad y despliegue automático en Google Drive de grandes volúmenes de datos (~200MB+).
+Sistema integral de automatización de datos construido con **Python**, **Streamlit (Render)** y **GitHub Actions** para el procesamiento, segmentación incremental, formateo, entrega en **Google Drive** y trazabilidad en **Google Sheets** de grandes volúmenes de registros (~200MB+).
 
 ---
 
-## 🛠️ Tecnologías Utilizadas
+## 🛠️ Stack Tecnológico
 
-- **Python 3.10**: Procesamiento dinámico de datos (`pandas`, `numpy`).
-- **pytest**: Suite de pruebas unitarias integradas para garantizar el control de calidad en CI/CD.
-- **Logging**: Registros de auditoría estructurados para trazabilidad del pipeline.
-- **Rclone**: Transferencia automatizada y segura de archivos hacia Google Drive vía OAuth 2.0.
-- **Git LFS**: Gestión e integración de archivos CSV de gran tamaño.
-- **GitHub Actions**: Pipeline CI/CD con control de calidad y ejecuciones interactivas (`workflow_dispatch`).
-- **JSON**: Persistencia del estado e índice de registros (`estado.json`) para garantizar ejecuciones secuenciales sin duplicados.
+- **Python 3.11**: Procesamiento y transformación de datos (`pandas`, `numpy`).
+- **Streamlit + Render**: Portal web interactivo desplegado en la nube para operadores, con control de acceso por ID, Modo Demo para visitantes y síntesis de voz nativa (`Web Speech API`).
+- **GitHub Actions**: Orquestación CI/CD con disparo remoto vía API (`workflow_dispatch`) y control de concurrencia (`concurrency`) para encolar ejecuciones simultáneas sin colisiones.
+- **Google Sheets API (`gspread`)**: Bitácora automática de auditoría que registra operador, fecha/hora, rangos procesados y estado final (`Exitoso` / `Fallido`).
+- **Rclone**: Transferencia automatizada y segura hacia Google Drive mediante OAuth 2.0 con nombres de archivo dinámicos por marca de tiempo.
+- **Git LFS & JSON**: Gestión de archivos fuente de gran volumen y persistencia transaccional de índices (`estado.json`) para garantizar lotes secuenciales sin duplicados.
+- **pytest**: Suite de pruebas unitarias locales para validar la lógica de segmentación y manejo de datos vacíos.
 
 ---
 
 ## ⚙️ Arquitectura del Flujo
 
-### 1. Control de Calidad (CI Quality Gate)
-- Ejecución automática de pruebas unitarias con `pytest` en la carpeta `tests/`.
-- Validación preventiva de lógica de rebanado y manejo de datos vacíos antes de procesar o alterar el almacenamiento.
+### 1. Portal de Control y Accesibilidad (`app.py` en Render)
+- **Control de Acceso:** Autenticación mediante ID de operador vinculado a variables de entorno seguras, más un **Modo Demo** para demostraciones sin afectar índices de producción.
+- **Monitoreo en Tiempo Real y Voz:** Consulta el estado de la corrida en GitHub Actions mediante *polling* y emite confirmación visual y auditiva personalizada al finalizar el registro en Google Sheets.
 
-### 2. Procesamiento de Datos (`script1.py`)
-- Cruce, deduplicación y filtrado de bases de datos de entrada (`BASE VAC 2.csv` y `VAC.csv`).
-- Rebanado dinámico según las cantidades solicitadas por el usuario.
-- Registros detallados con `logging` en lugar de impresiones estándar.
-- Actualización del índice de lectura en `estado.json` (`inicio_samsung` e `inicio_generico`) para mantener la trazabilidad de lotes.
+### 2. Control de Concurrencia y Extracción (`script1.py`)
+- Cola de ejecución única (`cancel-in-progress: false`) para evitar condiciones de carrera si varios operadores disparan lotes al mismo tiempo.
+- Cruce, deduplicación, filtrado dinámico y rebanado incremental leyendo y actualizando `estado.json` (`inicio_samsung` e `inicio_generico`).
 
 ### 3. Formateo de Entrega (`script2.py`)
-- Transformación de la estructura de columnas según los requerimientos de negocio.
-- Asignación dinámica de nombres de grupo (`grupo_nombre`).
-- Exportación de los archivos CSV finales generados.
+- Estandarización de columnas según reglas de negocio y asignación dinámica de nombres de grupo (`filtro_grupo_samsung`, `filtro_grupo_generico`).
 
-### 4. Subida automática a Google Drive
-- Autenticación segura mediante `rclone` utilizando tokens OAuth 2.0 y carpetas parametrizadas por variables de entorno (`GDRIVE_FOLDER_ID`).
-- Copia directa de los archivos producidos (`co_mobile_ft_vac_samsung_final.csv` y `co_mobile_ft_vac_generico_final.csv`) a la unidad de almacenamiento.
+### 4. Despliegue en Google Drive y Auditoría (`auditoria.py`)
+- **Almacenamiento Histórico:** Carga automática vía `rclone copyto` generando archivos únicos con sello de tiempo (`_YYYY-MM-DD_HH-MM-SS.csv`) para evitar sobrescrituras.
+- **Trazabilidad Completa:** Registro automático en Google Sheets tanto en ejecuciones exitosas (`if: success()`) como ante fallos (`if: failure()`).
 
 ---
 
