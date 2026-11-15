@@ -1,4 +1,5 @@
 import base64
+import json
 import os
 import time
 import requests
@@ -94,49 +95,57 @@ def get_secret(key):
     except Exception:
         return ""
 
-IDS_PERMITIDOS=1020471312
+
 # ---------------------------------------------------------
-# 3. PANTALLA DE SOLICITUD DE ID (ANTES DE LA INTERFAZ)
+# 3. PANTALLA DE SOLICITUD DE ID CON ASOCIACIÓN DE NOMBRE
 # ---------------------------------------------------------
 if "acceso_autorizado" not in st.session_state:
     st.session_state.acceso_autorizado = False
     st.session_state.usuario_id = ""
+    st.session_state.usuario_nombre = ""
 
 if not st.session_state.acceso_autorizado:
     st.title("🔐 Control de Acceso")
     st.markdown(
-        "Ingresa tu **ID de Operador** para acceder al panel o entra en modo visitante."
+        "Ingresa tu **número de identificación** para acceder al panel o entra en modo visitante."
     )
 
     id_ingresado = st.text_input(
-        "ID de Acceso", type="password", placeholder="Escribe tu ID aquí..."
+        "ID de Acceso", type="password", placeholder="Escribe tu cédula aquí..."
     )
 
     col_ingresar, col_demo = st.columns(2)
     with col_ingresar:
         if st.button("✅ Ingresar con mi ID", use_container_width=True):
-            # Lee los IDs válidos desde Render (ej: "101,102,admin") o usa "lax2026" por defecto
-            ids_validos_raw = get_secret("IDS_PERMITIDOS") or "lax2026"
-            lista_ids = [
-                x.strip() for x in ids_validos_raw.split(",") if x.strip()
-            ]
+            operadores_raw = get_secret("OPERADORES_JSON")
+            try:
+                # Convierte el texto JSON de Render en un diccionario de Python
+                operadores = (
+                    json.loads(operadores_raw)
+                    if operadores_raw
+                    else {"lax2026": "Administrador"}
+                )
+            except json.JSONDecodeError:
+                operadores = {"lax2026": "Administrador"}
 
-            if id_ingresado.strip() in lista_ids:
+            id_limpio = id_ingresado.strip()
+
+            if id_limpio in operadores:
                 st.session_state.acceso_autorizado = True
-                st.session_state.usuario_id = id_ingresado.strip()
+                st.session_state.usuario_id = id_limpio
+                st.session_state.usuario_nombre = operadores[id_limpio]
                 st.rerun()
             else:
-                st.error("❌ ID no autorizado. Verifica tu código.")
+                st.error("❌ ID no autorizado. Verifica tu número.")
 
     with col_demo:
         if st.button("👀 Modo Demo (Visitantes)", use_container_width=True):
             st.session_state.acceso_autorizado = True
             st.session_state.usuario_id = "DEMO"
+            st.session_state.usuario_nombre = "Visitante Portafolio"
             st.rerun()
 
-    st.stop()  # Detiene la página aquí hasta que ingrese un ID válido o entre a Demo
-
-
+    st.stop()
 # ---------------------------------------------------------
 # 4. TU INTERFAZ PRINCIPAL (SOLO VISIBLE TRAS VALIDAR ID)
 # ---------------------------------------------------------
@@ -150,9 +159,11 @@ with col_salir:
         st.session_state.usuario_id = ""
         st.rerun()
 
-st.subheader(
-    f"¡Bienvenido, Data Lovers! (ID: {st.session_state.usuario_id})"
-)
+#st.subheader(
+#    f"¡Bienvenido, Data Lovers! (ID: {st.session_state.usuario_id})"
+#)
+
+st.subheader(f"¡Bienvenido, {st.session_state.usuario_nombre}!")
 
 if st.button("🔊 Activar Saludo de Bienvenida", use_container_width=True):
     audio_js = """
@@ -273,10 +284,14 @@ if submitted:
                         url, json=payload, headers=headers, timeout=15
                     )
 
+                    #if response.status_code == 204:
+                    #    st.success(
+                    #        f"✅ ¡Proceso iniciado por el ID `{st.session_state.usuario_id}`! El pipeline se está ejecutando en GitHub Actions."
+                    #    )
                     if response.status_code == 204:
                         st.success(
-                            f"✅ ¡Proceso iniciado por el ID `{st.session_state.usuario_id}`! El pipeline se está ejecutando en GitHub Actions."
-                        )
+                            f"✅ ¡Proceso iniciado por **{st.session_state.usuario_nombre}** (ID: `{st.session_state.usuario_id}`)! El pipeline se está ejecutando en GitHub Actions."
+                        )    
                     else:
                         st.error(
                             f"❌ Error devuelto por GitHub ({response.status_code}): {response.text}"
