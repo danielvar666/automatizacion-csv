@@ -168,21 +168,22 @@ with col_salir:
 #    f"¡Bienvenido, Data Lovers! (ID: {st.session_state.usuario_id})"
 #)
 
-st.subheader(f"¡Bienvenido, {st.session_state.usuario_nombre}!")
+st.subheader(f"¡Bienvenido, Data Lovers! {st.session_state.usuario_nombre}")
 
 if st.button("🔊 Activar Saludo de Bienvenida", use_container_width=True):
-    audio_js = """
+    nombre_limpio = st.session_state.usuario_nombre.replace('"', '').replace("'", "")
+    audio_js = f"""
         <script>
-            (function() {
+            (function() {{
                 const targetWindow = window.parent || window;
-                if ('speechSynthesis' in targetWindow) {
+                if ('speechSynthesis' in targetWindow) {{
                     targetWindow.speechSynthesis.cancel();
-                    const msg = new targetWindow.SpeechSynthesisUtterance("¡Bienvenido, Data Lovers!");
+                    const msg = new targetWindow.SpeechSynthesisUtterance("¡Bienvenido, Data Lovers, {nombre_limpio}!");
                     msg.lang = 'es-ES';
                     msg.rate = 1.0;
                     targetWindow.speechSynthesis.speak(msg);
-                }
-            })();
+                }}
+            }})();
         </script>
     """
     components.html(audio_js, height=0)
