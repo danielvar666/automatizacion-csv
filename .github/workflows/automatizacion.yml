@@ -52,14 +52,7 @@ jobs:
 
       - name: Leer índices iniciales antes de procesar
         id: indices_ini
-        run: |
-          python -c '
-          import json
-          with open("estado.json") as f:
-              d = json.load(f)
-          print(f"ini_sam={d.get(\"inicio_samsung\", 0)}")
-          print(f"ini_gen={d.get(\"inicio_generico\", 0)}")
-          ' >> $GITHUB_OUTPUT
+        run: python -c 'import json; d=json.load(open("estado.json")); print(f"ini_sam={d.get(\"inicio_samsung\", 0)}"); print(f"ini_gen={d.get(\"inicio_generico\", 0)}")' >> $GITHUB_OUTPUT
 
       - name: Ejecutar extracción y limpieza (script1.py)
         run: |
