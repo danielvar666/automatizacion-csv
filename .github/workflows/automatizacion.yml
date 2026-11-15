@@ -69,3 +69,10 @@ jobs:
 
         rclone copy co_mobile_ft_vac_samsung_final.csv gdrive: --drive-root-folder-id "$FOLDER_ID" -v
         rclone copy co_mobile_ft_vac_generico_final.csv gdrive: --drive-root-folder-id "$FOLDER_ID" -v
+    - name: Guardar nuevo estado en el repositorio
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add estado.json
+        git diff --staged --quiet || git commit -m "chore: actualizar indices en estado.json [skip ci]"
+        git push    
