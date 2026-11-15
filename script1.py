@@ -1,6 +1,7 @@
-import pandas as pd
 import json
 import os
+import sys
+import pandas as pd
 
 ARCHIVO_ESTADO = "estado.json"
 
@@ -12,11 +13,17 @@ else:
     # Si es el primer día, empieza en 0
     estado = {"inicio_samsung": 0, "inicio_generico": 0}
 
-print(f"Posición inicial de hoy -> Samsung: {estado['inicio_samsung']}, Genérico: {estado['inicio_generico']}")
+print(
+    f"Posición inicial de hoy -> Samsung: {estado['inicio_samsung']}, Genérico: {estado['inicio_generico']}"
+)
 
-# 2. Preguntar la cantidad a procesar hoy
-cant_samsung = int(input("¿Cuántos registros necesitas para Samsung hoy?: "))
-cant_generico = int(input("¿Cuántos registros necesitas para Genérico hoy?: "))
+# 2. Leer cantidad desde argumentos CLI (GitHub Actions) o consola local
+if len(sys.argv) >= 4:
+    cant_samsung = int(sys.argv[1])
+    cant_generico = int(sys.argv[3])
+else:
+    cant_samsung = int(input("¿Cuántos registros necesitas para Samsung hoy?: "))
+    cant_generico = int(input("¿Cuántos registros necesitas para Genérico hoy?: "))
 
 # 3. Leer bases de datos
 df = pd.read_csv("BASE VAC 2.csv", dtype=str)
@@ -27,7 +34,7 @@ resultado = base.merge(
     df[["MSISDN", "marca_dvc_act", "municipio"]],
     how="inner",
     left_on="MSISDN",
-    right_on="MSISDN"
+    right_on="MSISDN",
 ).drop_duplicates(subset="MSISDN", keep="first")
 
 # 5. Filtrar Samsung usando la posición guardada
@@ -51,5 +58,7 @@ estado["inicio_generico"] = idx_g_fin
 with open(ARCHIVO_ESTADO, "w") as f:
     json.dump(estado, f, indent=4)
 
-print(f"\n¡Paso 1 completado con éxito!")
-print(f"Nueva posición guardada para mañana -> Samsung: {idx_s_fin}, Genérico: {idx_g_fin}")
+print("\n¡Paso 1 completado con éxito!")
+print(
+    f"Nueva posición guardada para mañana -> Samsung: {idx_s_fin}, Genérico: {idx_g_fin}"
+)
