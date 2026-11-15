@@ -79,6 +79,11 @@ st.markdown(
         background-color: #be123c !important;
         color: #ffffff !important;
     }
+    /* 7. Texto legible dentro de alertas de estado y éxito */
+    div[data-testid="stAlert"] p, div[data-testid="stAlert"] code {
+        color: #ffffff !important;
+        font-weight: 500 !important;
+    }
     </style>
 """,
     unsafe_allow_html=True,
@@ -289,12 +294,39 @@ if submitted:
                     #        f"✅ ¡Proceso iniciado por el ID `{st.session_state.usuario_id}`! El pipeline se está ejecutando en GitHub Actions."
                     #    )
                     if response.status_code == 204:
-                        st.success(
-                            f"✅ ¡Proceso iniciado por **{st.session_state.usuario_nombre}** (ID: `{st.session_state.usuario_id}`)! El pipeline se está ejecutando en GitHub Actions."
-                        )    
-                    else:
-                        st.error(
-                            f"❌ Error devuelto por GitHub ({response.status_code}): {response.text}"
+                        st.info(
+                            f"⏳ Proceso iniciado por **{st.session_state.usuario_nombre}** (ID: `{st.session_state.usuario_id}`). Ejecutando scripts en GitHub Actions..."
                         )
+
+                        # Esperar y verificar que el workflow termine con éxito
+                        runs_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/workflows/automatizacion.yml/runs?per_page=1"
+                        time.sleep(5)  # Pausa breve mientras GitHub registra la ejecución
+
+                        with st.spinner("Procesando lotes y subiendo archivos a Google Drive..."):
+                            estado_final = None
+                            for _ in range(36):  # Monitorea hasta por 3 minutos (36 x 5 seg)
+                                run_resp = session.get(runs_url, headers=headers, timeout=15)
+                                if run_resp.status_code == 200:
+                                    runs = run_resp.json().get("workflow_runs", [])
+                                    if runs:
+                                        status = runs[0].get("status")          # queued, in_progress, completed
+                                        conclusion = runs[0].get("conclusion")  # success, failure, cancelled
+                                        if status == "completed":
+                                            estado_final = conclusion
+                                            break
+                                time.sleep(5)
+
+                        if estado_final == "success":
+                            st.success(
+                                f"✅ Proceso exitoso — Archivos generados y cargados a Google Drive por **{st.session_state.usuario_nombre}**."
+                            )
+                        elif estado_final is None:
+                            st.warning(
+                                "⚠️ El proceso sigue ejecutándose en segundo plano. Revisa Google Drive en un minuto."
+                            )
+                        else:
+                            st.error(
+                                f"❌ El procesamiento falló en GitHub Actions (estado: {estado_final})."
+                            )
                 except requests.exceptions.RequestException as e:
                     st.error(f"❌ Error de red al conectar con GitHub API: {e}")
