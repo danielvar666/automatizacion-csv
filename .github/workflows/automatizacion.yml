@@ -3,22 +3,26 @@ name: Automatización Tigo con Parámetros
 on:
   workflow_dispatch:
     inputs:
-      cant_samsung:
-        description: 'Cantidad de registros para Samsung'
+      cantidad_samsung:
+        description: 'Cantidad de registros Samsung'
         required: true
-        default: '8000'
-      cant_generico:
-        description: 'Cantidad de registros para Genérico'
+        default: '100'
+        type: string
+      filtro_grupo_samsung:
+        description: 'Filtro de grupo para Samsung'
         required: true
-        default: '20000'
-      grupo_samsung:
-        description: 'Nombre de grupo para Samsung (ej. ventaft_samsung)'
+        default: 'ingrese'
+        type: string
+      cantidad_generico:
+        description: 'Cantidad de registros Genérico'
         required: true
-        default: 'ventaft_samsung'
-      grupo_generico:
-        description: 'Nombre de grupo para Genérico (ej. ventaft_generico)'
+        default: '100'
+        type: string
+      filtro_grupo_generico:
+        description: 'Filtro de grupo para Genérico'
         required: true
-        default: 'ventaft_generico'
+        default: 'ingrese'
+        type: string
 
 permissions:
   contents: write
