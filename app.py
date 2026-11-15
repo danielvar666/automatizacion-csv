@@ -1,5 +1,5 @@
 import base64
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import os
 import time
@@ -95,6 +95,26 @@ st.markdown(
 )
 
 
+# Función para sintetizar voz en el navegador del usuario
+def hablar_mensaje(texto):
+    texto_limpio = texto.replace('"', "").replace("'", "")
+    audio_js = f"""
+        <script>
+            (function() {{
+                const targetWindow = window.parent || window;
+                if ('speechSynthesis' in targetWindow) {{
+                    targetWindow.speechSynthesis.cancel();
+                    const msg = new targetWindow.SpeechSynthesisUtterance("{texto_limpio}");
+                    msg.lang = 'es-ES';
+                    msg.rate = 1.0;
+                    targetWindow.speechSynthesis.speak(msg);
+                }}
+            }})();
+        </script>
+    """
+    components.html(audio_js, height=0)
+
+
 # Función para leer variables de entorno de Render o secrets
 def get_secret(key):
     val = os.getenv(key)
@@ -104,6 +124,7 @@ def get_secret(key):
         return st.secrets.get(key, "")
     except Exception:
         return ""
+
 
 def obtener_indices_github(repo_owner, repo_name, headers):
     url_estado = f"https://api.github.com/repos/{repo_owner}/{repo_name}/contents/estado.json"
@@ -116,6 +137,7 @@ def obtener_indices_github(repo_owner, repo_name, headers):
     except Exception:
         pass
     return None, None
+
 
 def registrar_auditoria(
     usuario_id,
@@ -166,6 +188,7 @@ def registrar_auditoria(
     except Exception as e:
         return False, f"No se pudo escribir en Google Sheets: {e}"
 
+
 # ---------------------------------------------------------
 # 3. PANTALLA DE SOLICITUD DE ID CON ASOCIACIÓN DE NOMBRE
 # ---------------------------------------------------------
@@ -189,7 +212,6 @@ if not st.session_state.acceso_autorizado:
         if st.button("✅ Ingresar con mi ID", use_container_width=True):
             operadores_raw = get_secret("OPERADORES_JSON")
             try:
-                # Convierte el texto JSON de Render en un diccionario de Python
                 operadores = (
                     json.loads(operadores_raw)
                     if operadores_raw
@@ -216,6 +238,7 @@ if not st.session_state.acceso_autorizado:
             st.rerun()
 
     st.stop()
+
 # ---------------------------------------------------------
 # 4. TU INTERFAZ PRINCIPAL (SOLO VISIBLE TRAS VALIDAR ID)
 # ---------------------------------------------------------
@@ -229,29 +252,10 @@ with col_salir:
         st.session_state.usuario_id = ""
         st.rerun()
 
-#st.subheader(
-#    f"¡Bienvenido, Data Lovers! (ID: {st.session_state.usuario_id})"
-#)
-
 st.subheader(f"¡Bienvenido, Data Lovers! {st.session_state.usuario_nombre}")
 
 if st.button("🔊 Activar Saludo de Bienvenida", use_container_width=True):
-    nombre_limpio = st.session_state.usuario_nombre.replace('"', '').replace("'", "")
-    audio_js = f"""
-        <script>
-            (function() {{
-                const targetWindow = window.parent || window;
-                if ('speechSynthesis' in targetWindow) {{
-                    targetWindow.speechSynthesis.cancel();
-                    const msg = new targetWindow.SpeechSynthesisUtterance("¡Bienvenido, Data Lovers, {nombre_limpio}!");
-                    msg.lang = 'es-ES';
-                    msg.rate = 1.0;
-                    targetWindow.speechSynthesis.speak(msg);
-                }}
-            }})();
-        </script>
-    """
-    components.html(audio_js, height=0)
+    hablar_mensaje(f"¡Bienvenido, Data Lovers, {st.session_state.usuario_nombre}!")
 
 st.markdown(
     "Ingresa las cantidades de registros y escribe los filtros de grupo para **Samsung** y **Genérico** antes de iniciar la automatización."
@@ -309,9 +313,11 @@ if submitted:
     if st.session_state.usuario_id == "DEMO":
         with st.spinner("Simulando ejecución en Modo Demo..."):
             time.sleep(1.5)
+        msg_demo = f"El proceso fue exitoso, {st.session_state.usuario_nombre}"
         st.success(
             f"✅ [MODO DEMO] Simulación exitosa: {cant_samsung} Samsung y {cant_generico} Genérico."
         )
+        hablar_mensaje(msg_demo)
     else:
         github_token = get_secret("GH_PAT").strip()
         repo_owner = get_secret("GH_OWNER").strip()
@@ -323,6 +329,7 @@ if submitted:
             )
         else:
             url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/workflows/automatizacion.yml/dispatches"
+            url_runs = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/workflows/automatizacion.yml/runs?per_page=5"
 
             headers = {
                 "Authorization": f"Bearer {github_token}",
@@ -342,27 +349,67 @@ if submitted:
                 },
             }
 
-            with st.spinner("Enviando orden a GitHub Actions..."):
-                try:
-                    session = requests.Session()
-                    retries = Retry(
-                        total=3,
-                        backoff_factor=1,
-                        status_forcelist=[500, 502, 503, 504],
-                    )
-                    session.mount("https://", HTTPAdapter(max_retries=retries))
-                    response = session.post(
-                        url, json=payload, headers=headers, timeout=15
-                    )
+            try:
+                session = requests.Session()
+                retries = Retry(
+                    total=3,
+                    backoff_factor=1,
+                    status_forcelist=[500, 502, 503, 504],
+                )
+                session.mount("https://", HTTPAdapter(max_retries=retries))
 
-                    if response.status_code == 204:
-                        st.success(
-                            f"✅ Orden enviada por **{st.session_state.usuario_nombre}** (ID: `{st.session_state.usuario_id}`). "
-                            "Los archivos se subirán a Google Drive y quedarán registrados automáticamente en la bitácora en ~45 segundos."
-                        )
-                    else:
-                        st.error(
-                            f"❌ Error al disparar el pipeline (HTTP {response.status_code}): {response.text}"
-                        )
-                except requests.exceptions.RequestException as e:
-                    st.error(f"❌ Error de red al conectar con GitHub API: {e}")
+                hora_disparo = datetime.now(timezone.utc)
+                response = session.post(
+                    url, json=payload, headers=headers, timeout=15
+                )
+
+                if response.status_code == 204:
+                    with st.spinner(
+                        f"⏳ Procesando lotes para {st.session_state.usuario_nombre}, subiendo a Drive y registrando en Google Sheets..."
+                    ):
+                        run_actual = None
+                        tiempo_limite = time.time() + 300  # Máximo 5 minutos de espera
+
+                        while time.time() < tiempo_limite:
+                            time.sleep(5)
+                            resp_runs = session.get(
+                                url_runs, headers=headers, timeout=15
+                            )
+                            if resp_runs.status_code == 200:
+                                runs = resp_runs.json().get("workflow_runs", [])
+                                for r in runs:
+                                    creada = datetime.fromisoformat(
+                                        r["created_at"].replace("Z", "+00:00")
+                                    )
+                                    if creada >= hora_disparo:
+                                        run_actual = r
+                                        break
+
+                            if run_actual and run_actual["status"] == "completed":
+                                break
+
+                        if run_actual and run_actual["status"] == "completed":
+                            if run_actual["conclusion"] == "success":
+                                st.success(
+                                    f"✅ ¡El proceso fue exitoso, **{st.session_state.usuario_nombre}**! Los archivos ya están en Google Drive y registrados en Google Sheets."
+                                )
+                                hablar_mensaje(
+                                    f"El proceso fue exitoso, {st.session_state.usuario_nombre}"
+                                )
+                            else:
+                                st.error(
+                                    f"❌ Hubo un fallo en el proceso de **{st.session_state.usuario_nombre}**. Revisa la bitácora en Google Sheets."
+                                )
+                                hablar_mensaje(
+                                    f"Hubo un fallo en el proceso, {st.session_state.usuario_nombre}"
+                                )
+                        else:
+                            st.warning(
+                                "⚠️ El proceso sigue ejecutándose en segundo plano. Revisa Google Drive y Google Sheets en unos segundos."
+                            )
+                else:
+                    st.error(
+                        f"❌ Error al disparar el pipeline (HTTP {response.status_code}): {response.text}"
+                    )
+            except requests.exceptions.RequestException as e:
+                st.error(f"❌ Error de red al conectar con GitHub API: {e}")
