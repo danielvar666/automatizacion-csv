@@ -61,7 +61,7 @@ jobs:
 
       - name: Ejecutar post-procesamiento (script2.py)
         run: |
-          python script2.py
+          python script2.py "${{ github.event.inputs.filtro_grupo_samsung }}" "${{ github.event.inputs.filtro_grupo_generico }}"
 
       - name: Configurar Rclone
         run: |
