@@ -94,7 +94,7 @@ def get_secret(key):
     except Exception:
         return ""
 
-
+IDS_PERMITIDOS=1020471312
 # ---------------------------------------------------------
 # 3. PANTALLA DE SOLICITUD DE ID (ANTES DE LA INTERFAZ)
 # ---------------------------------------------------------
