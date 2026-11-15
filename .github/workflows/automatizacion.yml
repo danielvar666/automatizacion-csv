@@ -49,22 +49,12 @@ jobs:
 
     - name: Ejecutar Script 1 (Segmentación y Memoria)
       run: |
-        python -c "
-        cant_s = '${{ inputs.cant_samsung }}'
-        cant_g = '${{ inputs.cant_generico }}'
-        with open('inputs.txt', 'w') as f:
-            f.write(f'{cant_s}\n{cant_g}\n')
-        "
+        printf "%s\n%s\n" "${{ inputs.cantidad_samsung }}" "${{ inputs.cantidad_generico }}" > inputs.txt
         python script1.py < inputs.txt
 
     - name: Ejecutar Script 2 (Formateo Final)
       run: |
-        python -c "
-        grupo_s = '${{ inputs.grupo_samsung }}'
-        grupo_g = '${{ inputs.grupo_generico }}'
-        with open('inputs_s2.txt', 'w') as f:
-            f.write(f'{grupo_s}\n{grupo_g}\n')
-        "
+        printf "%s\n%s\n" "${{ inputs.filtro_grupo_samsung }}" "${{ inputs.filtro_grupo_generico }}" > inputs_s2.txt
         python script2.py < inputs_s2.txt
 
     - name: Configurar Rclone y Subir a Google Drive
@@ -77,6 +67,5 @@ jobs:
         mkdir -p ~/.config/rclone
         printf '[gdrive]\ntype = drive\nscope = drive\ntoken = %s\n' "$GDRIVE_TOKEN" > ~/.config/rclone/rclone.conf
 
-        # Subida limpia a tu carpeta propia sin flags adicionales
         rclone copy co_mobile_ft_vac_samsung_final.csv gdrive: --drive-root-folder-id "$FOLDER_ID" -v
         rclone copy co_mobile_ft_vac_generico_final.csv gdrive: --drive-root-folder-id "$FOLDER_ID" -v
