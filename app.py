@@ -370,16 +370,19 @@ if submitted:
 
                         with st.spinner("Procesando lotes y subiendo archivos a Google Drive..."):
                             estado_final = None
-                            for _ in range(36):  # Monitorea hasta por 3 minutos (36 x 5 seg)
-                                run_resp = session.get(runs_url, headers=headers, timeout=15)
-                                if run_resp.status_code == 200:
-                                    runs = run_resp.json().get("workflow_runs", [])
-                                    if runs:
-                                        status = runs[0].get("status")          # queued, in_progress, completed
-                                        conclusion = runs[0].get("conclusion")  # success, failure, cancelled
-                                        if status == "completed":
-                                            estado_final = conclusion
-                                            break
+                            for _ in range(96):  # Monitorea hasta por 8 minutos (96 x 5 seg)
+                                try:
+                                    run_resp = session.get(runs_url, headers=headers, timeout=15)
+                                    if run_resp.status_code == 200:
+                                        runs = run_resp.json().get("workflow_runs", [])
+                                        if runs:
+                                            status = runs[0].get("status")          # queued, in_progress, completed
+                                            conclusion = runs[0].get("conclusion")  # success, failure, cancelled
+                                            if status == "completed":
+                                                estado_final = conclusion
+                                                break
+                                except Exception:
+                                    pass  # Ignora micro-cortes temporales y reintenta en 5 segundos
                                 time.sleep(5)
 
                         if estado_final == "success":
