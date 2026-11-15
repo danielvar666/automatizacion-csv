@@ -64,15 +64,17 @@ jobs:
           python script2.py "${{ github.event.inputs.filtro_grupo_samsung }}" "${{ github.event.inputs.filtro_grupo_generico }}"
 
       - name: Configurar Rclone
+        env:
+          RCLONE_DATA: ${{ secrets.RCLONE_CONF }}
         run: |
-         sudo apt-get update && sudo apt-get install -y rclone
-         mkdir -p ~/.config/rclone
-         printf '%s\n' "${{ secrets.RCLONE_CONF }}" > ~/.config/rclone/rclone.conf
+          sudo apt-get update && sudo apt-get install -y rclone
+          printf '%s\n' "$RCLONE_DATA" > rclone.conf
+          rclone listremotes --config rclone.conf
 
       - name: Subir archivos finales a Google Drive
         run: |
-          rclone copy co_mobile_ft_vac_samsung_final.csv gdrive:
-          rclone copy co_mobile_ft_vac_generico_final.csv gdrive:
+          rclone copy co_mobile_ft_vac_samsung_final.csv gdrive: --config rclone.conf
+          rclone copy co_mobile_ft_vac_generico_final.csv gdrive: --config rclone.conf
 
       - name: Guardar nuevo estado en el repositorio
         run: |
