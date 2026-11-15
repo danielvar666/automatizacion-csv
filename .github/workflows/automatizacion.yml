@@ -1,4 +1,4 @@
-name: Automatización Tigo con Parámetros
+name: Procesamiento Automatizado CSV
 
 on:
   workflow_dispatch:
@@ -7,22 +7,26 @@ on:
         description: 'Cantidad de registros Samsung'
         required: true
         default: '100'
-        type: string
       filtro_grupo_samsung:
-        description: 'Filtro de grupo para Samsung'
+        description: 'Filtro de grupo Samsung'
         required: true
         default: 'ingrese'
-        type: string
       cantidad_generico:
         description: 'Cantidad de registros Genérico'
         required: true
         default: '100'
-        type: string
       filtro_grupo_generico:
-        description: 'Filtro de grupo para Genérico'
+        description: 'Filtro de grupo Genérico'
         required: true
         default: 'ingrese'
-        type: string
+      usuario_id:
+        description: 'ID del operador'
+        required: false
+        default: 'MANUAL_GH'
+      usuario_nombre:
+        description: 'Nombre del operador'
+        required: false
+        default: 'Ejecución Manual GitHub'
 
 permissions:
   contents: write
@@ -32,47 +36,70 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Descargar repositorio y archivos LFS
-      uses: actions/checkout@v4
-      with:
-        lfs: true
+      - name: Descargar repositorio y archivos LFS
+        uses: actions/checkout@v4
+        with:
+          lfs: true
 
-    - name: Configurar Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-    - name: Instalar dependencias
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      - name: Instalar dependencias
+        run: |
+          pip install -r requirements.txt
 
-    - name: Ejecutar Script 1 (Segmentación y Memoria)
-      run: |
-        printf "%s\n%s\n" "${{ inputs.cantidad_samsung }}" "${{ inputs.cantidad_generico }}" > inputs.txt
-        python script1.py < inputs.txt
+      - name: Leer índices iniciales antes de procesar
+        id: indices_ini
+        run: |
+          python -c '
+          import json
+          with open("estado.json") as f:
+              d = json.load(f)
+          print(f"ini_sam={d.get(\"inicio_samsung\", 0)}")
+          print(f"ini_gen={d.get(\"inicio_generico\", 0)}")
+          ' >> $GITHUB_OUTPUT
 
-    - name: Ejecutar Script 2 (Formateo Final)
-      run: |
-        printf "%s\n%s\n" "${{ inputs.filtro_grupo_samsung }}" "${{ inputs.filtro_grupo_generico }}" > inputs_s2.txt
-        python script2.py < inputs_s2.txt
+      - name: Ejecutar extracción y limpieza (script1.py)
+        run: |
+          python script1.py "${{ github.event.inputs.cantidad_samsung }}" "${{ github.event.inputs.filtro_grupo_samsung }}" "${{ github.event.inputs.cantidad_generico }}" "${{ github.event.inputs.filtro_grupo_generico }}"
 
-    - name: Configurar Rclone y Subir a Google Drive
-      env:
-        GDRIVE_TOKEN: ${{ secrets.RCLONE_CONFIG_GDRIVE_TOKEN }}
-        FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
-      run: |
-        sudo apt-get update && sudo apt-get install -y rclone
+      - name: Ejecutar post-procesamiento (script2.py)
+        run: |
+          python script2.py
 
-        mkdir -p ~/.config/rclone
-        printf '[gdrive]\ntype = drive\nscope = drive\ntoken = %s\n' "$GDRIVE_TOKEN" > ~/.config/rclone/rclone.conf
+      - name: Configurar Rclone
+        run: |
+          sudo apt-get update && sudo apt-get install -y rclone
+          mkdir -p ~/.config/rclone
+          echo "${{ secrets.RCLONE_CONF }}" > ~/.config/rclone/rclone.conf
 
-        rclone copy co_mobile_ft_vac_samsung_final.csv gdrive: --drive-root-folder-id "$FOLDER_ID" -v
-        rclone copy co_mobile_ft_vac_generico_final.csv gdrive: --drive-root-folder-id "$FOLDER_ID" -v
-    - name: Guardar nuevo estado en el repositorio
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-        git add estado.json
-        git diff --staged --quiet || git commit -m "chore: actualizar indices en estado.json [skip ci]"
-        git push    
+      - name: Subir archivos finales a Google Drive
+        run: |
+          rclone copy co_mobile_ft_vac_samsung_final.csv gdrive:
+          rclone copy co_mobile_ft_vac_generico_final.csv gdrive:
+
+      - name: Guardar nuevo estado en el repositorio
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add estado.json
+          git diff --staged --quiet || git commit -m "chore: actualizar indices en estado.json [skip ci]"
+          git push
+
+      - name: Registrar auditoría en Google Sheets (Éxito)
+        if: success()
+        env:
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+        run: |
+          python auditoria.py "${{ github.event.inputs.usuario_id }}" "${{ github.event.inputs.usuario_nombre }}" "${{ steps.indices_ini.outputs.ini_sam }}" "${{ github.event.inputs.cantidad_samsung }}" "${{ github.event.inputs.filtro_grupo_samsung }}" "${{ steps.indices_ini.outputs.ini_gen }}" "${{ github.event.inputs.cantidad_generico }}" "${{ github.event.inputs.filtro_grupo_generico }}" "Exitoso"
+
+      - name: Registrar auditoría en Google Sheets (Fallo)
+        if: failure()
+        env:
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+        run: |
+          python auditoria.py "${{ github.event.inputs.usuario_id }}" "${{ github.event.inputs.usuario_nombre }}" "${{ steps.indices_ini.outputs.ini_sam }}" "${{ github.event.inputs.cantidad_samsung }}" "${{ github.event.inputs.filtro_grupo_samsung }}" "${{ steps.indices_ini.outputs.ini_gen }}" "${{ github.event.inputs.cantidad_generico }}" "${{ github.event.inputs.filtro_grupo_generico }}" "Fallido"

@@ -304,7 +304,7 @@ with st.form("pipeline_form"):
         "🚀 Disparar Procesamiento", use_container_width=True
     )
 
-# 6. LÓGICA DE ENVÍO A GITHUB ACTIONS (URL CORREGIDA A .COM)
+# 6. LÓGICA DE ENVÍO A GITHUB ACTIONS
 if submitted:
     if st.session_state.usuario_id == "DEMO":
         with st.spinner("Simulando ejecución en Modo Demo..."):
@@ -322,7 +322,6 @@ if submitted:
                 "❌ Error: Faltan credenciales. Verifica 'Environment Variables' en Render (GH_PAT, GH_OWNER, GH_REPO)."
             )
         else:
-            # URL CORREGIDA (.com en lugar de .org)
             url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/workflows/automatizacion.yml/dispatches"
 
             headers = {
@@ -338,6 +337,8 @@ if submitted:
                     "filtro_grupo_samsung": filtro_grupo_samsung,
                     "cantidad_generico": str(cant_generico),
                     "filtro_grupo_generico": filtro_grupo_generico,
+                    "usuario_id": str(st.session_state.usuario_id),
+                    "usuario_nombre": str(st.session_state.usuario_nombre),
                 },
             }
 
@@ -350,93 +351,18 @@ if submitted:
                         status_forcelist=[500, 502, 503, 504],
                     )
                     session.mount("https://", HTTPAdapter(max_retries=retries))
-                    ini_sam, ini_gen = obtener_indices_github(repo_owner, repo_name, headers)
                     response = session.post(
                         url, json=payload, headers=headers, timeout=15
                     )
 
-                    #if response.status_code == 204:
-                    #    st.success(
-                    #        f"✅ ¡Proceso iniciado por el ID `{st.session_state.usuario_id}`! El pipeline se está ejecutando en GitHub Actions."
-                    #    )
                     if response.status_code == 204:
-                        st.info(
-                            f"⏳ Proceso iniciado por **{st.session_state.usuario_nombre}** (ID: `{st.session_state.usuario_id}`). Ejecutando scripts en GitHub Actions..."
+                        st.success(
+                            f"✅ Orden enviada por **{st.session_state.usuario_nombre}** (ID: `{st.session_state.usuario_id}`). "
+                            "Los archivos se subirán a Google Drive y quedarán registrados automáticamente en la bitácora en ~45 segundos."
                         )
-
-                        # Esperar y verificar que el workflow termine con éxito
-                        runs_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/workflows/automatizacion.yml/runs?per_page=1"
-                        time.sleep(5)  # Pausa breve mientras GitHub registra la ejecución
-
-                        with st.spinner("Procesando lotes y subiendo archivos a Google Drive..."):
-                            estado_final = None
-                            for _ in range(96):  # Monitorea hasta por 8 minutos (96 x 5 seg)
-                                try:
-                                    run_resp = session.get(runs_url, headers=headers, timeout=15)
-                                    if run_resp.status_code == 200:
-                                        runs = run_resp.json().get("workflow_runs", [])
-                                        if runs:
-                                            status = runs[0].get("status")          # queued, in_progress, completed
-                                            conclusion = runs[0].get("conclusion")  # success, failure, cancelled
-                                            if status == "completed":
-                                                estado_final = conclusion
-                                                break
-                                except Exception:
-                                    pass  # Ignora micro-cortes temporales y reintenta en 5 segundos
-                                time.sleep(5)
-
-                        if estado_final == "success":
-                            fin_sam, fin_gen = obtener_indices_github(repo_owner, repo_name, headers)
-                            rango_sam = f"{ini_sam+1} - {fin_sam}" if ini_sam is not None and fin_sam is not None else "N/A"
-                            rango_gen = f"{ini_gen+1} - {fin_gen}" if ini_gen is not None and fin_gen is not None else "N/A"
-
-                            st.success(
-                                f"✅ Proceso exitoso — Archivos generados y cargados a Google Drive por **{st.session_state.usuario_nombre}**."
-                            )
-                            ok_log, msg_log = registrar_auditoria(
-                                st.session_state.usuario_id,
-                                st.session_state.usuario_nombre,
-                                cant_samsung,
-                                rango_sam,
-                                filtro_grupo_samsung,
-                                cant_generico,
-                                rango_gen,
-                                filtro_grupo_generico,
-                                "Exitoso",
-                            )
-                            if ok_log:
-                                st.caption("📝 Ejecución registrada en la bitácora de auditoría.")
-                            else:
-                                st.warning(f"⚠️ {msg_log}")
-                        elif estado_final is None:
-                            st.warning(
-                                "⚠️ El proceso sigue ejecutándose en segundo plano. Revisa Google Drive en un minuto."
-                            )
-                            registrar_auditoria(
-                                st.session_state.usuario_id,
-                                st.session_state.usuario_nombre,
-                                cant_samsung,
-                                "N/A",
-                                filtro_grupo_samsung,
-                                cant_generico,
-                                "N/A",
-                                filtro_grupo_generico,
-                                "En progreso (Timeout UI)",
-                            )
-                        else:
-                            st.error(
-                                f"❌ El procesamiento falló en GitHub Actions (estado: {estado_final})."
-                            )
-                            registrar_auditoria(
-                                st.session_state.usuario_id,
-                                st.session_state.usuario_nombre,
-                                cant_samsung,
-                                "N/A",
-                                filtro_grupo_samsung,
-                                cant_generico,
-                                "N/A",
-                                filtro_grupo_generico,
-                                f"Fallido ({estado_final})",
-                            )
+                    else:
+                        st.error(
+                            f"❌ Error al disparar el pipeline (HTTP {response.status_code}): {response.text}"
+                        )
                 except requests.exceptions.RequestException as e:
                     st.error(f"❌ Error de red al conectar con GitHub API: {e}")
