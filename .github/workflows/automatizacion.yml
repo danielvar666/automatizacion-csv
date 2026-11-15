@@ -31,6 +31,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: procesamiento-csv-unico
+  cancel-in-progress: false  
+
 jobs:
   procesar:
     runs-on: ubuntu-latest
@@ -74,8 +78,9 @@ jobs:
           RCLONE_CONFIG_GDRIVE_TOKEN: ${{ secrets.RCLONE_CONFIG_GDRIVE_TOKEN }}
           GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
         run: |
-          rclone copy co_mobile_ft_vac_samsung_final.csv "gdrive:$GDRIVE_FOLDER_ID"
-          rclone copy co_mobile_ft_vac_generico_final.csv "gdrive:$GDRIVE_FOLDER_ID"
+          FECHA=$(TZ="America/Bogota" date +"%Y-%m-%d_%H-%M-%S")
+          rclone copyto co_mobile_ft_vac_samsung_final.csv "gdrive:$GDRIVE_FOLDER_ID/co_mobile_ft_vac_samsung_final_${FECHA}.csv"
+          rclone copyto co_mobile_ft_vac_generico_final.csv "gdrive:$GDRIVE_FOLDER_ID/co_mobile_ft_vac_generico_final_${FECHA}.csv"
 
       - name: Guardar nuevo estado en el repositorio
         run: |
