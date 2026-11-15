@@ -105,13 +105,26 @@ def get_secret(key):
     except Exception:
         return ""
 
+def obtener_indices_github(repo_owner, repo_name, headers):
+    url_estado = f"https://api.github.com/repos/{repo_owner}/{repo_name}/contents/estado.json"
+    try:
+        resp = requests.get(url_estado, headers=headers, timeout=10)
+        if resp.status_code == 200:
+            contenido_b64 = resp.json().get("content", "")
+            datos = json.loads(base64.b64decode(contenido_b64).decode("utf-8"))
+            return datos.get("inicio_samsung", 0), datos.get("inicio_generico", 0)
+    except Exception:
+        pass
+    return None, None
 
 def registrar_auditoria(
     usuario_id,
     usuario_nombre,
     cant_samsung,
+    rango_samsung,
     filtro_samsung,
     cant_generico,
+    rango_generico,
     filtro_generico,
     estado,
 ):
@@ -141,8 +154,10 @@ def registrar_auditoria(
             str(usuario_id),
             str(usuario_nombre),
             int(cant_samsung),
+            str(rango_samsung),
             str(filtro_samsung),
             int(cant_generico),
+            str(rango_generico),
             str(filtro_generico),
             str(estado),
         ]
@@ -335,7 +350,7 @@ if submitted:
                         status_forcelist=[500, 502, 503, 504],
                     )
                     session.mount("https://", HTTPAdapter(max_retries=retries))
-
+                    ini_sam, ini_gen = obtener_indices_github(repo_owner, repo_name, headers)
                     response = session.post(
                         url, json=payload, headers=headers, timeout=15
                     )
@@ -368,6 +383,10 @@ if submitted:
                                 time.sleep(5)
 
                         if estado_final == "success":
+                            fin_sam, fin_gen = obtener_indices_github(repo_owner, repo_name, headers)
+                            rango_sam = f"{ini_sam} - {fin_sam}" if ini_sam is not None and fin_sam is not None else "N/A"
+                            rango_gen = f"{ini_gen} - {fin_gen}" if ini_gen is not None and fin_gen is not None else "N/A"
+
                             st.success(
                                 f"✅ Proceso exitoso — Archivos generados y cargados a Google Drive por **{st.session_state.usuario_nombre}**."
                             )
@@ -375,8 +394,10 @@ if submitted:
                                 st.session_state.usuario_id,
                                 st.session_state.usuario_nombre,
                                 cant_samsung,
+                                rango_sam,
                                 filtro_grupo_samsung,
                                 cant_generico,
+                                rango_gen,
                                 filtro_grupo_generico,
                                 "Exitoso",
                             )
@@ -392,8 +413,10 @@ if submitted:
                                 st.session_state.usuario_id,
                                 st.session_state.usuario_nombre,
                                 cant_samsung,
+                                "N/A",
                                 filtro_grupo_samsung,
                                 cant_generico,
+                                "N/A",
                                 filtro_grupo_generico,
                                 "En progreso (Timeout UI)",
                             )
@@ -405,8 +428,10 @@ if submitted:
                                 st.session_state.usuario_id,
                                 st.session_state.usuario_nombre,
                                 cant_samsung,
+                                "N/A",
                                 filtro_grupo_samsung,
                                 cant_generico,
+                                "N/A",
                                 filtro_grupo_generico,
                                 f"Fallido ({estado_final})",
                             )
