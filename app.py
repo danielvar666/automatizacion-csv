@@ -1,7 +1,12 @@
 import base64
+from datetime import datetime
 import json
 import os
 import time
+from zoneinfo import ZoneInfo
+
+from google.oauth2.service_account import Credentials
+import gspread
 import requests
 from requests.adapters import HTTPAdapter
 import streamlit as st
@@ -100,6 +105,51 @@ def get_secret(key):
     except Exception:
         return ""
 
+
+def registrar_auditoria(
+    usuario_id,
+    usuario_nombre,
+    cant_samsung,
+    filtro_samsung,
+    cant_generico,
+    filtro_generico,
+    estado,
+):
+    creds_raw = get_secret("GCP_SERVICE_ACCOUNT")
+    sheet_id = get_secret("GOOGLE_SHEET_ID").strip()
+
+    if not creds_raw or not sheet_id:
+        return False, "Faltan credenciales de Google Sheets en Render."
+
+    try:
+        creds_dict = json.loads(creds_raw)
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive",
+        ]
+        creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+        client = gspread.authorize(creds)
+        sheet = client.open_by_key(sheet_id).sheet1
+
+        ahora_col = datetime.now(ZoneInfo("America/Bogota"))
+        fecha_str = ahora_col.strftime("%Y-%m-%d")
+        hora_str = ahora_col.strftime("%H:%M:%S")
+
+        fila = [
+            fecha_str,
+            hora_str,
+            str(usuario_id),
+            str(usuario_nombre),
+            int(cant_samsung),
+            str(filtro_samsung),
+            int(cant_generico),
+            str(filtro_generico),
+            str(estado),
+        ]
+        sheet.append_row(fila)
+        return True, "Registro guardado en bitácora."
+    except Exception as e:
+        return False, f"No se pudo escribir en Google Sheets: {e}"
 
 # ---------------------------------------------------------
 # 3. PANTALLA DE SOLICITUD DE ID CON ASOCIACIÓN DE NOMBRE
@@ -321,13 +371,44 @@ if submitted:
                             st.success(
                                 f"✅ Proceso exitoso — Archivos generados y cargados a Google Drive por **{st.session_state.usuario_nombre}**."
                             )
+                            ok_log, msg_log = registrar_auditoria(
+                                st.session_state.usuario_id,
+                                st.session_state.usuario_nombre,
+                                cant_samsung,
+                                filtro_grupo_samsung,
+                                cant_generico,
+                                filtro_grupo_generico,
+                                "Exitoso",
+                            )
+                            if ok_log:
+                                st.caption("📝 Ejecución registrada en la bitácora de auditoría.")
+                            else:
+                                st.warning(f"⚠️ {msg_log}")
                         elif estado_final is None:
                             st.warning(
                                 "⚠️ El proceso sigue ejecutándose en segundo plano. Revisa Google Drive en un minuto."
                             )
+                            registrar_auditoria(
+                                st.session_state.usuario_id,
+                                st.session_state.usuario_nombre,
+                                cant_samsung,
+                                filtro_grupo_samsung,
+                                cant_generico,
+                                filtro_grupo_generico,
+                                "En progreso (Timeout UI)",
+                            )
                         else:
                             st.error(
                                 f"❌ El procesamiento falló en GitHub Actions (estado: {estado_final})."
+                            )
+                            registrar_auditoria(
+                                st.session_state.usuario_id,
+                                st.session_state.usuario_nombre,
+                                cant_samsung,
+                                filtro_grupo_samsung,
+                                cant_generico,
+                                filtro_grupo_generico,
+                                f"Fallido ({estado_final})",
                             )
                 except requests.exceptions.RequestException as e:
                     st.error(f"❌ Error de red al conectar con GitHub API: {e}")

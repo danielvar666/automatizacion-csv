@@ -3,3 +3,6 @@ openpyxl
 pytest
 streamlit
 requests
+urllib3
+gspread
+google-auth
