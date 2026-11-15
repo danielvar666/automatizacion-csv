@@ -65,9 +65,9 @@ jobs:
 
       - name: Configurar Rclone
         run: |
-          sudo apt-get update && sudo apt-get install -y rclone
-          mkdir -p ~/.config/rclone
-          echo "${{ secrets.RCLONE_CONF }}" > ~/.config/rclone/rclone.conf
+         sudo apt-get update && sudo apt-get install -y rclone
+         mkdir -p ~/.config/rclone
+         printf '%s\n' "${{ secrets.RCLONE_CONF }}" > ~/.config/rclone/rclone.conf
 
       - name: Subir archivos finales a Google Drive
         run: |
